@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tread Pathing — FTC tank drive path following</title>
+<meta name="description" content="A path planner and follower for FIRST Tech Challenge tank drives, running inside OnBotJava.">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="index.html">Tread<span>Pathing</span></a>
+  <nav><a href="index.html" class="on">Home</a><a href="docs.html">Docs</a><a href="planner.html">Planner</a></nav>
+  <a class="gh" href="https://github.com/BotBuilders-Robotics/TreadPathing">GitHub</a>
+</header>
+<section class="hero">
+  <span class="status">it drives &middot; Control Hub v1.0 &middot; SDK 11.1</span>
+  <h1>Path following for FTC tank drives.</h1>
+  <p class="lede">
+    What Pedro Pathing does for mecanum, for differential drive &mdash; running inside
+    OnBotJava, with no Android Studio and no Gradle. Pure Java 7 source you paste into the
+    editor: no jars to upload, no dependencies to resolve, nothing that can silently brick a
+    Robot Controller at a competition.
+  </p>
+  <div class="cta">
+    <a class="primary" href="planner.html">Open the planner</a>
+    <a href="docs.html">Read the docs</a>
+    <a href="https://github.com/BotBuilders-Robotics/TreadPathing">Source on GitHub</a>
+  </div>
+</section>
+
+<div class="band">
+  <h2>Why not just fork a mecanum follower</h2>
+  <div class="callout">
+    <p>
+      Pedro's follower sums four vectors and hands the result to a mecanum mixer. That works
+      because a mecanum robot can move sideways on command. A tank robot cannot: it has three
+      degrees of freedom in the plane and two actuators, and its lateral velocity is
+      identically zero. The only way it closes a lateral error is by <strong>turning while
+      moving</strong>, which means translation and heading stop being independent channels and
+      the whole vector-summing architecture loses its meaning.
+    </p>
+    <p>
+      So this is not a port. It is a time-parameterised trajectory follower, because correction
+      authority is proportional to reference velocity, and a separate pose-hold primitive for
+      the endpoint, because no trajectory follower converges at its own endpoint.
+    </p>
+  </div>
+
+  <h2>What you get</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>A route builder</h3>
+      <p>
+        Splines, turns, holds, waits, cusps and markers, in a fluent builder that mirrors the
+        planner exactly. Reversed segments are handled for you.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Two controllers</h3>
+      <p>
+        Ramsete and an LTV unicycle controller, both fed by a trajectory that respects velocity,
+        acceleration, centripetal and wheel-speed limits.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Three localizers</h3>
+      <p>
+        Drive encoders, two odometry pods, or a goBILDA Pinpoint &mdash; all fusing heading from
+        the IMU, because on a skid-steer chassis wheels give translation and the IMU gives theta.
+      </p>
+    </div>
+    <div class="card">
+      <h3>A tuning ladder</h3>
+      <p>
+        Nine OpModes in order, each measuring one thing and handing you a number. Measure it;
+        do not compute it from the spec sheet.
+      </p>
+    </div>
+    <div class="card">
+      <h3>An offline planner</h3>
+      <p>
+        One self-contained HTML file. Draw a route, watch it drive, and copy out a paste-ready
+        builder chain. Drop a datalog on it to overlay measured pose on planned.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Java 7, on purpose</h3>
+      <p>
+        No lambdas, no streams, no <code>java.time</code>. OnBotJava's Java 8 support is an
+        opt-in checkbox that is off by default, and a lint enforces it on every build.
+      </p>
+    </div>
+  </div>
+
+  <h2>Installing it</h2>
+  <p>
+    The library is a package tree you drop next to your team code. It is a
+    <strong>sibling</strong> of <code>org/firstinspires/ftc/teamcode</code>, not nested inside
+    it. Over USB, adb puts the whole thing there in one shot:
+  </p>
+  <pre><code>adb push src/org/treadpathing \
+         /sdcard/FIRST/java/src/org/
+adb push quickstart/org/firstinspires/ftc/teamcode/tread \
+         /sdcard/FIRST/java/src/org/firstinspires/ftc/teamcode/</code></pre>
+  <p>
+    Then <strong>Build Everything</strong>. On a Control Hub v1.0 running SDK 11.1 the library
+    plus the quickstart compiles in about 23 seconds from cold. In Android Studio, drop
+    <code>src/org/treadpathing</code> into <code>TeamCode/src/main/java/</code> and it works
+    unchanged.
+  </p>
+
+  <h2>Writing an auto</h2>
+  <pre><code>Follower follower = Constants.buildFollower(hardwareMap);
+follower.setPose(new Pose(9.0, 60.0, 0.0));
+
+Route route = follower.route()
+        .splineTo(new Pose(34.0, 60.0, Math.toRadians(0.0)))
+        .splineTo(new Pose(52.0, 84.0, Math.toRadians(70.0)))
+        .stopAndHold(1.50)
+        .turnToDegrees(20.0)
+        .reversed()
+        .splineTo(new Pose(20.0, 72.0, Math.toRadians(20.0)))
+        .build();
+
+follower.follow(route);</code></pre>
+  <p>
+    Heading is where the robot's <strong>nose</strong> points, not its direction of travel. On a
+    tank robot those are the same thing up to a sign, and the sign is what
+    <code>reversed()</code> controls.
+  </p>
+
+  <h2>Honest about what it is</h2>
+  <div class="callout">
+    <p>
+      It has run on <strong>one</strong> robot: a two-motor tank chassis on a Control Hub v1.0,
+      through rungs 0 to 5 of the tuning ladder, and it drove the route it was given. That
+      covers the drivetrain layer, the drive-encoder localizer, the IMU heading fuser,
+      trajectory generation and the follower.
+    </p>
+    <p>
+      It does not yet cover the odometry-pod or Pinpoint localizers, the LTV controller, or any
+      four-motor chassis &mdash; and accuracy on hardware is unquantified, because the rungs
+      that measure cross-track and terminal error have not been run. The
+      <a href="docs.html#known-limitations">known limitations</a> are written down rather than
+      glossed over.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <p>Tread Pathing &middot; a path planner and follower for FTC tank drives &middot;
+     built by <a href="https://github.com/BotBuilders-Robotics">BotBuilders Robotics</a></p>
+</footer>
+</body>
+</html>
