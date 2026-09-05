@@ -90,6 +90,15 @@
     color: var(--faint);
   }
   header .spacer { flex: 1; }
+  /* Sent to someone who has never seen the library, this page should still say where it
+     came from. Styled as a link rather than a button: it leaves, it does not do anything. */
+  header .repo {
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+  }
+  header .repo:hover { color: var(--primary); border-bottom-color: var(--primary); }
 
   .app {
     display: grid;
@@ -361,6 +370,8 @@
   <span class="hint">click the field to add a waypoint &middot; drag to move &middot; drag the nose to aim
     &middot; drag the robot to set the start</span>
   <span class="spacer"></span>
+  <a class="repo" href="https://github.com/BotBuilders-Robotics/TreadPathing"
+     target="_blank" rel="noopener">GitHub</a>
   <button id="unitToggle" title="switch between inches and centimetres">in</button>
   <button id="themeToggle">theme</button>
 </header>

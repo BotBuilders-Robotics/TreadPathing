@@ -51,6 +51,7 @@
 <p>Everything is <strong>inches, radians and seconds</strong>. Every pose you write is where the robot&#x27;s <strong>nose</strong> points, which is what you see standing at the field. Reversed segments are handled for you.</p>
 <hr>
 <h2 id="installing-it-in-onbotjava">Installing it in OnBotJava</h2>
+<p>The source lives at <a href="https://github.com/BotBuilders-Robotics/TreadPathing">github.com/BotBuilders-Robotics/TreadPathing</a>. Clone it, or use <strong>Code → Download ZIP</strong> if the machine you are working from has no git.</p>
 <ol><li>In the OnBotJava editor, create the folder path <code>org/treadpathing/geometry</code> (type the path with slashes in the new-file dialog; folders are created implicitly).</li><li>Paste in each file from <code>src/org/treadpathing/...</code>, keeping the package structure. The tree is a <strong>sibling</strong> of <code>org/firstinspires/ftc/teamcode</code>, not nested inside it.</li><li>Copy <code>quickstart/org/firstinspires/ftc/teamcode/tread/</code> in the same way.</li><li><strong>Build Everything.</strong></li><li>If you are using a Pinpoint, restart the robot afterwards so the configuration UI rescans for device types, then add it under I2C Devices as <em>Tread Pinpoint Odometry Computer</em>.</li></ol>
 <p>In Android Studio, drop <code>src/org/treadpathing</code> into <code>TeamCode/src/main/java/</code> and it works unchanged.</p>
 <h3 id="pasting-51-files-is-miserable-so-push-them-over-adb-instead">Pasting 51 files is miserable, so push them over adb instead</h3>
