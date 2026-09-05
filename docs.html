@@ -79,6 +79,8 @@ adb forward tcp:8081 tcp:8081   # websocket</code></pre>
 <h3 id="there-is-no-live-dashboard">There is no live dashboard</h3>
 <p>FTC Dashboard serves its web UI out of Android assets, and OnBotJava explicitly cannot upload an AAR containing assets. Its <code>@Config</code> scan also reads only the APK&#x27;s own dex, which OnBotJava code is not in. Panels has the same problem.</p>
 <p>So tuning goes through gamepad plus telemetry, and through CSV logs. <code>Datalogger</code> writes to <code>/sdcard/FIRST/java/src/Datalogs</code>, which is inside the OnBotJava source tree, so a log appears in the editor&#x27;s file browser with a one-click download. Drop it on <code>visualizer.html</code> and you get the plots — offline instead of live, but with a record you can keep between matches.</p>
+<p><strong>Every run writes its own file.</strong> The first square test is <code>tread_square.txt</code>, the next is <code>tread_square_2.txt</code>, and so on: a tuning run you cannot repeat is worth more than a tidy directory. The OpMode&#x27;s telemetry names the file it opened, which is the one to download.</p>
+<p>That does mean the directory only grows, so each tuning OpMode has a <code>LOGGING</code> constant at the top — set it false and the run writes nothing. In your own OpModes, <code>Datalogger.disabled()</code> returns a logger that swallows every write, so the logging can go on or off without the code around it changing shape.</p>
 <hr>
 <h2 id="writing-an-auto">Writing an auto</h2>
 <pre class="lang-java"><code>Follower follower = Constants.buildFollower(hardwareMap);
