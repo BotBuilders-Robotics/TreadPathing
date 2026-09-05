@@ -192,7 +192,13 @@
   button:hover { border-color: var(--primary); color: var(--primary); }
   button.primary { background: var(--primary); border-color: var(--primary); color: var(--surface); }
   button.primary:hover { opacity: .88; color: var(--surface); }
-  button.danger:hover { border-color: var(--danger); color: var(--danger); }
+  /* Destructive buttons read as destructive before you hover them, not after. */
+  button.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: var(--danger-w);
+  }
+  button.danger:hover { background: var(--danger); border-color: var(--danger); color: var(--surface); }
   button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
   input[type="number"], input[type="text"] {
@@ -212,7 +218,7 @@
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 
-  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 172px; overflow-y: auto; }
   ol.steps li {
     display: grid;
     grid-template-columns: 22px minmax(0,1fr) auto;
@@ -285,6 +291,7 @@
   <span class="hint">click the field to add a waypoint &middot; drag to move &middot; drag the nose to aim
     &middot; drag the robot to set the start</span>
   <span class="spacer"></span>
+  <button id="unitToggle" title="switch between inches and centimetres">in</button>
   <button id="themeToggle">theme</button>
 </header>
 
@@ -322,6 +329,11 @@
       </div>
     </div>
 
+    <div class="panel" id="editPanel">
+      <h2>Selected step</h2>
+      <div id="editBody"></div>
+    </div>
+
     <div class="panel">
       <div class="tabs" id="tabs">
         <button data-tab="start" class="on">start</button>
@@ -333,8 +345,8 @@
 
       <div class="tab-pane on" id="tab-start">
       <div class="grid3">
-        <div><label for="startX">x (in)</label><input type="number" id="startX" step="0.5" value="9"></div>
-        <div><label for="startY">y (in)</label><input type="number" id="startY" step="0.5" value="60"></div>
+        <div><label for="startX">x (in)</label><input type="number" id="startX" data-len step="0.5" value="9"></div>
+        <div><label for="startY">y (in)</label><input type="number" id="startY" data-len step="0.5" value="60"></div>
         <div><label for="startH">heading (deg)</label><input type="number" id="startH" step="1" value="0"></div>
       </div>
       <p class="note">Or drag the robot on the field: the body moves it, the nose aims it.</p>
@@ -342,16 +354,16 @@
 
       <div class="tab-pane" id="tab-limits">
       <div class="grid2">
-        <div><label for="maxVel">max velocity (in/s)</label><input type="number" id="maxVel" step="1" value="40"></div>
-        <div><label for="maxWheel">max wheel speed (in/s)</label><input type="number" id="maxWheel" step="1" value="50"></div>
-        <div><label for="maxAcc">max accel (in/s&sup2;)</label><input type="number" id="maxAcc" step="1" value="50"></div>
-        <div><label for="maxDec">max decel (in/s&sup2;)</label><input type="number" id="maxDec" step="1" value="45"></div>
-        <div><label for="maxCent">max centripetal (in/s&sup2;)</label><input type="number" id="maxCent" step="1" value="40"></div>
-        <div><label for="trackWidth">track width (in)</label><input type="number" id="trackWidth" step="0.25" value="14"></div>
+        <div><label for="maxVel">max velocity (in/s)</label><input type="number" id="maxVel" data-len step="1" value="40"></div>
+        <div><label for="maxWheel">max wheel speed (in/s)</label><input type="number" id="maxWheel" data-len step="1" value="50"></div>
+        <div><label for="maxAcc">max accel (in/s&sup2;)</label><input type="number" id="maxAcc" data-len step="1" value="50"></div>
+        <div><label for="maxDec">max decel (in/s&sup2;)</label><input type="number" id="maxDec" data-len step="1" value="45"></div>
+        <div><label for="maxCent">max centripetal (in/s&sup2;)</label><input type="number" id="maxCent" data-len step="1" value="40"></div>
+        <div><label for="trackWidth">track width (in)</label><input type="number" id="trackWidth" data-len step="0.25" value="14"></div>
       </div>
       <div class="grid2" style="margin-top:8px">
-        <div><label for="robotLength">robot length (in)</label><input type="number" id="robotLength" step="0.5" value="17"></div>
-        <div><label for="robotWidth">robot width (in)</label><input type="number" id="robotWidth" step="0.5" value="16"></div>
+        <div><label for="robotLength">robot length (in)</label><input type="number" id="robotLength" data-len step="0.5" value="17"></div>
+        <div><label for="robotWidth">robot width (in)</label><input type="number" id="robotWidth" data-len step="0.5" value="16"></div>
       </div>
       </div>
 
@@ -361,6 +373,8 @@
         <button id="copyJava" class="primary">copy</button>
         <span class="hint" id="copyState"></span>
       </div>
+      <p class="note">Always in inches, whichever unit the page is showing &mdash; the library
+      works in inches and so do the datalogs.</p>
       </div>
 
       <div class="tab-pane" id="tab-field">
@@ -395,11 +409,6 @@
       </div>
       <table class="readout" id="logReadout"></table>
       </div>
-    </div>
-
-    <div class="panel" id="editPanel">
-      <h2>Selected step</h2>
-      <div id="editBody"></div>
     </div>
 
     <div class="panel">
@@ -795,13 +804,86 @@
     });
   }
 
-  function num(id, fallback) {
-    var value = parseFloat(document.getElementById(id).value);
-    return isFinite(value) ? value : fallback;
+  // ---------------------------------------------------------------- units
+  //
+  // Inches are the only unit this page thinks in. The library works in inches, the datalogs
+  // are in inches, and the exported Java is in inches, so metric is a display conversion
+  // applied at the edge and nowhere else. Convert internally and the export would quietly
+  // start generating routes in the wrong scale, which is the kind of bug that ends up on a
+  // field rather than on a screen.
+  var UNIT_STORE = 'tread.units';
+  var CM_PER_INCH = 2.54;
+  var metric = false;
+
+  function toDisplay(inches) {
+    return metric ? inches * CM_PER_INCH : inches;
   }
 
-  function setNumber(id, value) {
-    document.getElementById(id).value = String(round(value));
+  function fromDisplay(shown) {
+    return metric ? shown / CM_PER_INCH : shown;
+  }
+
+  /** Distance for the readout, with its unit. */
+  function showLength(inches, digits) {
+    return toDisplay(inches).toFixed(digits === undefined ? 1 : digits)
+      + (metric ? ' cm' : ' in');
+  }
+
+  function showSpeed(inchesPerSecond) {
+    return toDisplay(inchesPerSecond).toFixed(1) + (metric ? ' cm/s' : ' in/s');
+  }
+
+  /** Rewrites '(in)' and '(in/s)' in a label to whichever unit is showing. */
+  function unitText(text) {
+    return metric ? text.replace(/\bin\b/g, 'cm') : text;
+  }
+
+  function num(id, fallback) {
+    var input = document.getElementById(id);
+    var value = parseFloat(input.value);
+    if (!isFinite(value)) return fallback;
+    // Fallbacks are quoted in inches, so only a real reading needs converting.
+    return input.hasAttribute('data-len') ? fromDisplay(value) : value;
+  }
+
+  function setNumber(id, inches) {
+    var input = document.getElementById(id);
+    if (!input.hasAttribute('data-len')) {
+      input.value = String(round(inches));
+      return;
+    }
+    // A quarter inch is a sensible quantum to snap to; a quarter centimetre is not, so in
+    // metric the display carries two decimals instead.
+    input.value = metric ? String(Math.round(toDisplay(inches) * 100) / 100)
+                         : String(round(inches));
+  }
+
+  function applyUnits() {
+    document.getElementById('unitToggle').textContent = metric ? 'cm' : 'in';
+    var labels = document.getElementsByTagName('label');
+    for (var i = 0; i < labels.length; i++) {
+      if (!labels[i].hasAttribute('data-label')) {
+        labels[i].setAttribute('data-label', labels[i].innerHTML);
+      }
+      labels[i].innerHTML = unitText(labels[i].getAttribute('data-label'));
+    }
+  }
+
+  function setMetric(on) {
+    var inputs = document.querySelectorAll('[data-len]');
+    var held = [];
+    var i;
+    // Read every field in inches before the unit changes under it, then write them back.
+    for (i = 0; i < inputs.length; i++) held.push(num(inputs[i].id, 0));
+    metric = on;
+    for (i = 0; i < inputs.length; i++) setNumber(inputs[i].id, held[i]);
+    applyUnits();
+    try {
+      window.localStorage.setItem(UNIT_STORE, on ? 'cm' : 'in');
+    } catch (err) {
+      // Remembering the preference is a convenience, not worth failing over.
+    }
+    refresh();
   }
 
   // ---------------------------------------------------------------- route building
@@ -995,7 +1077,7 @@
     ctx.fillStyle = css('--faint');
     ctx.font = '11px ' + css('--f-mono');
     ctx.fillText('0,0', 5, box.height - 6);
-    ctx.fillText('144', box.width - 26, box.height - 6);
+    ctx.fillText(metric ? '366' : '144', box.width - 26, box.height - 6);
     ctx.save();
     ctx.translate(6, 14);
     ctx.fillText('y', 0, 0);
@@ -1139,33 +1221,38 @@
     var width = num('robotWidth', 16);
     var p = toScreen(pose.x, pose.y);
 
+    // Drawn the way the landing page draws it: a light body with dark trim, four wheels and
+    // a filled nose. The wheels are what stop it reading as a generic box -- they say which
+    // way the thing is built to move, which on a tank robot is the whole point.
+    var body = length * view.scale;
+    var beam = width * view.scale;
+    var trim = active ? css('--primary') : css('--ink');
+
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.rotate(-pose.heading);
 
-    // Solid, so the robot reads as an object you can grab rather than an annotation. It is
-    // drawn over the path deliberately: at this size the footprint is the thing you are
-    // judging clearances with.
-    ctx.fillStyle = active ? css('--primary') : css('--ink');
-    ctx.globalAlpha = active ? 0.95 : 0.88;
-    ctx.fillRect(-length / 2 * view.scale, -width / 2 * view.scale,
-                 length * view.scale, width * view.scale);
-    ctx.globalAlpha = 1;
-    // A heavier surface-coloured outline: the fill is --ink, which is dark in the light
-    // theme and lands on a dark field render, so the edge is what separates the two.
-    ctx.strokeStyle = css('--surface');
-    ctx.lineWidth = 2.25;
-    ctx.strokeRect(-length / 2 * view.scale, -width / 2 * view.scale,
-                   length * view.scale, width * view.scale);
-
-    // The nose is cut out of the body rather than drawn on it, so it stays legible against
-    // both the light and dark fills.
+    ctx.fillStyle = active ? css('--primary-w') : css('--surface');
+    ctx.strokeStyle = trim;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(length / 2 * view.scale, 0);
-    ctx.lineTo((length / 2 - 4) * view.scale, -3 * view.scale);
-    ctx.lineTo((length / 2 - 4) * view.scale, 3 * view.scale);
+    ctx.rect(-body / 2, -beam / 2, body, beam);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = trim;
+    var wheelLength = body * 0.3;
+    var wheelWidth = beam * 0.16;
+    ctx.fillRect(-body * 0.4, -beam / 2 - wheelWidth, wheelLength, wheelWidth);
+    ctx.fillRect(body * 0.1, -beam / 2 - wheelWidth, wheelLength, wheelWidth);
+    ctx.fillRect(-body * 0.4, beam / 2, wheelLength, wheelWidth);
+    ctx.fillRect(body * 0.1, beam / 2, wheelLength, wheelWidth);
+
+    ctx.beginPath();
+    ctx.moveTo(body / 2, 0);
+    ctx.lineTo(body / 2 - beam * 0.22, -beam * 0.16);
+    ctx.lineTo(body / 2 - beam * 0.22, beam * 0.16);
     ctx.closePath();
-    ctx.fillStyle = css('--surface');
     ctx.fill();
     ctx.restore();
   }
@@ -1326,7 +1413,7 @@
     built.segments.forEach(function (seg) {
       if (seg.kind === 'drive') driveLength += seg.trajectory.length;
     });
-    rows.push(['path length', driveLength.toFixed(1) + ' in', '']);
+    rows.push(['path length', showLength(driveLength), '']);
     rows.push(['segments', String(built.segments.length), '']);
 
     var trackWidth = num('trackWidth', 14);
@@ -1336,18 +1423,20 @@
       peakWheel = Math.max(peakWheel, TM.peakWheelSpeed(seg.trajectory, trackWidth));
     });
     var wheelLimit = num('maxWheel', 50);
-    rows.push(['peak wheel speed', peakWheel.toFixed(1) + ' in/s',
+    rows.push(['peak wheel speed', showSpeed(peakWheel),
                peakWheel > wheelLimit + 0.5 ? 'bad' : '']);
 
     if (at) {
       rows.push(['&mdash;', '', '']);
       rows.push(['t', state.scrub.toFixed(2) + ' s', '']);
-      rows.push(['x, y', at.pose.x.toFixed(1) + ', ' + at.pose.y.toFixed(1), '']);
+      rows.push(['x, y', toDisplay(at.pose.x).toFixed(1) + ', '
+                 + toDisplay(at.pose.y).toFixed(1) + (metric ? ' cm' : ' in'), '']);
       rows.push(['heading', (at.pose.heading / DEG).toFixed(0) + '&deg;', '']);
-      rows.push(['velocity', (at.pose.velocity || 0).toFixed(1) + ' in/s', '']);
+      rows.push(['velocity', showSpeed(at.pose.velocity || 0), '']);
       if (at.pose.curvature) {
         var radius = 1 / Math.abs(at.pose.curvature);
-        rows.push(['turn radius', radius > 999 ? 'straight' : radius.toFixed(0) + ' in', '']);
+        rows.push(['turn radius',
+                   radius > 999 ? 'straight' : showLength(radius, 0), '']);
       }
     }
 
@@ -1414,8 +1503,8 @@
     var html = '';
     if (step.type === 'waypoint') {
       html += '<div class="grid3">'
-        + numberField('wpX', 'x (in)', step.x, 0.5)
-        + numberField('wpY', 'y (in)', step.y, 0.5)
+        + numberField('wpX', unitText('x (in)'), toDisplay(step.x), 0.5, true)
+        + numberField('wpY', unitText('y (in)'), toDisplay(step.y), 0.5, true)
         + numberField('wpH', 'heading (deg)', step.heading / DEG, 1)
         + '</div>'
         + '<div class="grid2" style="margin-top:8px">'
@@ -1461,9 +1550,10 @@
     });
   }
 
-  function numberField(id, label, value, step) {
+  function numberField(id, label, value, step, isLength) {
     return '<div><label for="' + id + '">' + label + '</label>'
-      + '<input type="number" id="' + id + '" step="' + step + '" value="'
+      + '<input type="number" id="' + id + '"' + (isLength ? ' data-len' : '')
+      + ' step="' + step + '" value="'
       + (Math.round(value * 1000) / 1000) + '"></div>';
   }
 
@@ -1472,7 +1562,12 @@
     if (!input) return;
     input.addEventListener('input', function () {
       var value = parseFloat(input.value);
-      if (isFinite(value)) { apply(value); refresh(true); }
+      if (!isFinite(value)) return;
+      // The step this writes into is stored in inches, so a length field has to come back
+      // through the conversion. Skipping this stores centimetres as inches and the route
+      // silently changes shape.
+      apply(input.hasAttribute('data-len') ? fromDisplay(value) : value);
+      refresh(true);
     });
   }
 
@@ -2028,6 +2123,10 @@
     setTimeout(function () { state2.textContent = ''; }, 1800);
   });
 
+  document.getElementById('unitToggle').addEventListener('click', function () {
+    setMetric(!metric);
+  });
+
   document.getElementById('themeToggle').addEventListener('click', function () {
     var root = document.documentElement;
     var current = root.getAttribute('data-theme');
@@ -2141,8 +2240,9 @@
   }
 
   function loadExample() {
-    document.getElementById('startX').value = '9';
-    document.getElementById('startY').value = '60';
+    // Through setNumber, because these are inches and the fields may be showing centimetres.
+    setNumber('startX', 9);
+    setNumber('startY', 60);
     document.getElementById('startH').value = '0';
     state.steps = [
       { type: 'waypoint', x: 34, y: 60, heading: 0, tangentScale: TM.DEFAULT_TANGENT_SCALE },
@@ -2157,6 +2257,21 @@
     state.scrub = 0;
     refresh();
   }
+
+  (function restoreUnits() {
+    var saved = null;
+    try {
+      saved = window.localStorage.getItem(UNIT_STORE);
+    } catch (err) {
+      saved = null;
+    }
+    // Inch values are already in the markup, so only metric needs the fields rewritten.
+    if (saved === 'cm') {
+      setMetric(true);
+    } else {
+      applyUnits();
+    }
+  }());
 
   restoreFieldImage();
   loadExample();
