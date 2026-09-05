@@ -10,6 +10,8 @@ import com.qualcomm.robotcore.hardware.I2cDeviceSynchSimple;
 import com.qualcomm.robotcore.hardware.configuration.annotations.DeviceProperties;
 import com.qualcomm.robotcore.hardware.configuration.annotations.I2cDeviceType;
 
+import org.firstinspires.ftc.robotcore.external.ExportToBlocks;
+
 /**
  * Driver for the goBILDA Pinpoint Odometry Computer.
  *
@@ -156,23 +158,34 @@ public class PinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
         headingRateRadiansPerSecond = buffer.getFloat(36);
     }
 
+    @ExportToBlocks(heading = "x (inches)", comment = "Field X position, in inches.")
     public double getXInches() {
         return xPositionMm / MM_PER_INCH;
     }
 
+    @ExportToBlocks(heading = "y (inches)", comment = "Field Y position, in inches.")
     public double getYInches() {
         return yPositionMm / MM_PER_INCH;
     }
 
     /** Heading in radians, as the device reports it (unwrapped). */
+    /** Heading in degrees, for Blocks. The library itself works in radians. */
+    @ExportToBlocks(heading = "heading (degrees)",
+                    comment = "Heading in degrees, counter-clockwise positive.")
+    public double getHeadingDegrees() {
+        return Math.toDegrees(getHeadingRadians());
+    }
+
     public double getHeadingRadians() {
         return headingRadians;
     }
 
+    @ExportToBlocks(heading = "x velocity (in/s)", comment = "Forward velocity, inches per second.")
     public double getXVelocityInches() {
         return xVelocityMmPerSecond / MM_PER_INCH;
     }
 
+    @ExportToBlocks(heading = "y velocity (in/s)", comment = "Lateral velocity, inches per second.")
     public double getYVelocityInches() {
         return yVelocityMmPerSecond / MM_PER_INCH;
     }
@@ -181,10 +194,12 @@ public class PinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
         return headingRateRadiansPerSecond;
     }
 
+    @ExportToBlocks(heading = "x encoder ticks", comment = "Raw X pod encoder count.")
     public int getXEncoderTicks() {
         return xEncoderTicks;
     }
 
+    @ExportToBlocks(heading = "y encoder ticks", comment = "Raw Y pod encoder count.")
     public int getYEncoderTicks() {
         return yEncoderTicks;
     }
@@ -194,6 +209,7 @@ public class PinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
         return loopTimeMicros;
     }
 
+    @ExportToBlocks(heading = "update rate (Hz)", comment = "How often the board is refreshing its pose.")
     public double getFrequencyHz() {
         return loopTimeMicros == 0 ? 0.0 : 1000000.0 / loopTimeMicros;
     }
@@ -254,6 +270,8 @@ public class PinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSimple> {
     }
 
     /** Zeroes position and recalibrates the IMU. The robot must be completely still. */
+    @ExportToBlocks(heading = "reset position and IMU",
+                    comment = "Zeroes the pose and recalibrates. Keep the robot still.")
     public void resetPositionAndImu() {
         writeInt(REG_DEVICE_CONTROL, CONTROL_RESET_POSE_AND_IMU);
     }

@@ -5,28 +5,11 @@ A path planner and follower for **FIRST Tech Challenge tank drives**, written to
 Studio and no Gradle.
 
 Pure Java 7 source you paste into the OnBotJava editor. No jars to upload, no dependencies to
-resolve, nothing that can silently brick a Robot Controller at a competition.
-
-**Status: it drives.** The library has been through the tuning ladder and run an autonomous
-route on a two-motor tank chassis — a Control Hub v1.0 on SDK 11.1, REV Ultraplanetary HD Hex
-motors, drive-encoder odometry fused with the built-in IMU — and the robot drove the route it
-was given. What that does and does not mean is set out under
-[Known limitations](#known-limitations); the short version is that the planner, the follower
-and the hardware layer work, and the controller gains on that robot are still the shipped
-defaults rather than tuned ones.
+resolve.
 
 ---
 
-## Why this is not a fork of a mecanum follower
-
-Pedro's follower sums four vectors and hands the result to a mecanum mixer. That works because
-a mecanum robot can move sideways on command. A tank robot cannot: it has three degrees of
-freedom in the plane and two actuators, and its lateral velocity is identically zero. The only
-way it closes a lateral error is by **turning while moving**, which means translation and
-heading stop being independent channels and the whole vector-summing architecture loses its
-meaning.
-
-Three consequences shape everything here:
+Three ideas shape everything here:
 
 - **A path is not enough.** The follower needs a time-parameterised trajectory, because
   correction authority is proportional to reference velocity.
@@ -90,9 +73,7 @@ on every push after that -- `org/treadpathing/treadpathing/...`. The build fails
 `duplicate class` errors that say nothing about the actual cause. Pushing the parent is right
 both times.
 
-Reload `192.168.43.1:8080` so the editor rescans, then **Build Everything**. Push one file
-first and confirm it appears in the editor before sending all 51 — whether adb-over-wifi is
-enabled varies by SDK version and hub configuration.
+Reload `192.168.43.1:8080` so the editor rescans, then **Build Everything**.
 
 Over USB you can skip the robot's network entirely and drive OnBotJava from a browser on the
 laptop, which wants **two** forwards rather than one:
@@ -110,33 +91,17 @@ connection page.
 
 ### Why not just upload a jar
 
-`build.sh` writes one to `build/jar/treadpathing.jar` and OnBotJava will happily take it, but
-**do not run one at a competition**, for a reason that is not obvious.
+`build.sh` writes one to `build/jar/treadpathing.jar` and OnBotJava will happily take it.
 
 That jar is compiled against `stubs/`, which are not the SDK. Every signature in there was
-transcribed by hand from the FTC SDK sources and javadoc, and a transcription is a thing that
-can be wrong. When you paste source, that does not matter: OnBotJava recompiles against the
-*real* SDK, so a drifted signature is a compile error in the editor, on the bench, before the
-robot has moved. Ship the jar and the recompile never happens — the bytecode links straight to
-a method the real SDK may not have, and you find out as a `NoSuchMethodError` at runtime, on
-the field, in a match. The jar references 24 SDK classes, so there is real surface for it.
-
-That is precisely the failure mode this whole library is shaped around avoiding, and it is
-reason enough on its own. The two smaller costs come after it: you can no longer delete unused
-files to cut compile time, and you are back to having a jar to upload.
-
-The jar is genuinely useful for the bench — a fast sanity check that the library is
-self-contained, and a way to build against it off-robot. Treat it as a build artefact, not as
-the thing you drive.
+transcribed by hand from the FTC SDK sources and javadoc.
 
 ### The file-count problem, stated honestly
 
 The library is **51 source files**. OnBotJava compiles them all, in-process, on a Control Hub
-with 1 GB of RAM shared with the whole Android system. FIRST publishes no compile-time numbers,
-so here is one measurement rather than a promise: on a **Control Hub v1.0 running SDK 11.1**,
+with 1 GB of RAM shared with the whole Android system. On a **Control Hub v1.0 running SDK 11.1**,
 the library plus the quickstart built in **23 s** from cold and **14 s** for an incremental
-rebuild after editing one file. That is one hub with one set of team code also present. Measure
-it on yours before you rely on it.
+rebuild after editing one file. That is one hub with one set of team code also present.
 
 If it is too slow, delete what you do not use. The localizers are independent: keeping only
 the one your robot has removes 3 or 4 files, and `LtvUnicycleController` plus `LtvGainTable`
@@ -152,7 +117,7 @@ simply absent on the Control Hub's Android 7.1). Callbacks are anonymous inner c
 `tools/lint_java7.py` enforces this. One stray lambda is a compile error a rookie cannot
 diagnose, on a robot, at a competition.
 
-### There is no live dashboard, and there cannot be
+### There is no live dashboard
 
 FTC Dashboard serves its web UI out of Android assets, and OnBotJava explicitly cannot upload
 an AAR containing assets. Its `@Config` scan also reads only the APK's own dex, which
@@ -221,6 +186,38 @@ already pointing along the line, a turn goes in first. Check the segment count i
 
 ---
 
+## Building autos in Blocks
+
+`TreadBlocks.java` exposes the route builder to the Blocks editor, so a team that has not
+started writing Java can still plan and drive an auto:
+
+```
+start route at 9, 60 facing 0
+spline to 34, 60 facing 0
+spline to 52, 84 facing 70
+stop and hold 1.5
+run route
+```
+
+Blocks cannot hold a builder and chain onto it, so the fluent API is flattened into statements
+against one route the class keeps for you. Inches and degrees throughout, because that is what
+the field is marked in and what the planner shows.
+
+`PinpointDriver` exports its pose, velocity and encoder getters the same way, so a Blocks team
+with a Pinpoint gets those blocks under **Additional Hardware** without doing anything.
+
+**Markers and actions are deliberately missing.** They take a callback and Blocks has no way to
+hand one across. If something has to happen part-way along a route, split it: run the first
+half, do the thing, run the second. Clumsier than a marker, and honest about what is possible.
+
+One trap worth knowing if you extend this. The Blocks entry points are `static`, because a
+`BlocksOpModeCompanion` gives you nowhere else to put state, and the Robot Controller keeps the
+class loaded between runs. Anything you keep there outlives the OpMode, so `start route`
+rebuilds the follower from scratch every time rather than reusing one that would still be
+holding the last run's pose.
+
+---
+
 ## The tuning ladder
 
 Work down it in order — each rung genuinely depends on the ones below. Every OpMode prints the
@@ -253,18 +250,37 @@ makes every curve in every auto slightly wrong.
 
 ## Localization
 
-Three options behind one interface. Switch with one line in `Constants.ODOMETRY`.
+Three options behind one interface, plus one optional extra. Switch with one line in
+`Constants.ODOMETRY`.
 
 | | Needs | Honest assessment |
 |---|---|---|
 | `DriveEncoderLocalizer` | nothing | Fine on straights; every turn scrubs. Use it to bring the library up, not to win |
 | `TwoWheelLocalizer` | 2 pods + IMU | The real target |
 | `PinpointLocalizer` | goBILDA Pinpoint | Same accuracy, one I2C read, least code to get wrong |
+| `BbrExpanderLocalizer` | BBR Digital Expander | In `optional/`, not the default drop &mdash; see below |
+
+### The optional one
+
+`optional/org/treadpathing/localization/BbrExpanderLocalizer.java` drives the
+[BotBuilders Digital Expander](https://expander.buildingblockrobotics.com), which fuses its own
+gyro with two dead wheels and returns a field pose in millimetres. It is an adapter, not a
+driver: the board's own `BBRDigitalExpander.java` and `BBRRegMap.java` do the talking.
+
+That dependency is why it is not in `src/`. Everything in `src/` compiles against the FTC SDK
+and nothing else, and a file there that imports a third-party driver would mean every team
+pasting a driver for a board most of them do not own, or watching Build Everything fail on a
+library they just installed. Copy it only if you have the board; `build.sh` still compiles it
+against a stub.
+
+The pods, their ticks per millimetre and the tracking-point offsets live in the board's own
+flash rather than in `Constants` &mdash; configure them once with BBR's tooling. The
+adapter waits for the board to report its localizer ready before trusting a reading, for the
+same reason `HeadingFuser` waits for the IMU.
 
 **Heading always comes from the IMU.** Deriving it from `(vRight - vLeft) / trackWidth` on a
 skid-steer chassis accumulates error on every turn — ten degrees over a thirty-second auto is
-routine. Wheels give translation; the IMU gives theta. This one choice is worth more than any
-upgrade to the controller.
+routine. Wheels give translation; the IMU gives theta.
 
 The IMU costs about 7 ms because I2C is excluded from bulk reads, so `HeadingFuser` reads it
 every Nth loop and integrates wheel-derived rotation in between. Drive encoders can supply that
@@ -386,22 +402,6 @@ can type-check it off-robot. They are not the SDK and they never ship.
 - **Trajectories are planned, not re-planned.** If the robot enters a segment off its planned
   start, the trajectory is not shifted — the controller pulls the robot onto the planned path
   instead. That keeps the driven path identical to the one in the visualizer.
-- **The Pinpoint driver is untested on hardware.** It is an independent implementation of the
-  documented I2C protocol, written from goBILDA's published register map. Check
-  `PinpointLocalizer.isHealthy()` and the loop frequency before trusting it.
-- **It has run on one robot, not many.** A two-motor tank chassis on a Control Hub v1.0
-  (SDK 11.1) completed rungs 0 to 5 of the tuning ladder and then drove an autonomous route
-  correctly. That covers the drivetrain layer, the drive-encoder localizer, the IMU heading
-  fuser, trajectory generation and the follower. It does not cover the two-wheel-pod or
-  Pinpoint localizers, the LTV controller, or any chassis with four motors.
-- **Accuracy on hardware is unquantified.** The route above was judged by eye, not measured.
-  Rungs 6 to 9 — `CircleTest`, `SquareTest`, `TurnTest`, `PoseTest` — are what produce
-  cross-track and terminal-error numbers, and they have not been run. The simulator figures in
-  the test suite are the only quantified accuracy claims here.
-- **The stubs were wrong until a real compile found them.** Two signatures transcribed into
-  `stubs/` did not match the SDK and had to be corrected on first contact with OnBotJava. The
-  stubs are checked by compilation on every build, but only against themselves; treat a fresh
-  OnBotJava build as the real test of any hardware-layer change.
 
 ---
 
