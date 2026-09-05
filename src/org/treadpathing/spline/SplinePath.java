@@ -22,14 +22,19 @@ public final class SplinePath {
      */
     public static final double DEFAULT_TANGENT_SCALE = 1.25;
 
+    /** A leg with this cap is not capped at all; the route constraints alone govern it. */
+    public static final double NO_SPEED_CAP = 0.0;
+
     private final SplineSegment[] segments;
     private final ArcLengthTable[] tables;
     private final double[] segmentStart;
+    private final double[] segmentSpeedCap;
     private final double totalLength;
 
-    private SplinePath(SplineSegment[] segments, ArcLengthTable[] tables) {
+    private SplinePath(SplineSegment[] segments, ArcLengthTable[] tables, double[] speedCaps) {
         this.segments = segments;
         this.tables = tables;
+        this.segmentSpeedCap = speedCaps;
         this.segmentStart = new double[segments.length];
 
         double accumulated = 0.0;
@@ -92,6 +97,20 @@ public final class SplinePath {
         return segments[index].curvature(local);
     }
 
+    /**
+     * The speed ceiling asked for on the leg containing this arc length, or
+     * {@link #NO_SPEED_CAP} if that leg is uncapped.
+     *
+     * <p>This is a property of the path rather than of the constraints because it varies
+     * along the path: it is how you ask for one slow leg in the middle of a fast route. The
+     * generator folds it into the same forward/backward sweep as every other limit, so the
+     * robot eases down into a capped leg and back up out of it instead of stopping at the
+     * seam.
+     */
+    public double speedCapAt(double arcLength) {
+        return segmentSpeedCap[segmentIndexAt(arcLength)];
+    }
+
     /** Position plus direction of travel at this arc length. */
     public Pose poseAt(double arcLength) {
         int index = segmentIndexAt(arcLength);
@@ -115,11 +134,13 @@ public final class SplinePath {
         private final List<Pose> waypoints = new ArrayList<Pose>();
         private final List<Double> outgoingScale = new ArrayList<Double>();
         private final List<Double> incomingScale = new ArrayList<Double>();
+        private final List<Double> speedCap = new ArrayList<Double>();
 
         private Builder(Pose start) {
             waypoints.add(start);
             outgoingScale.add(Double.valueOf(DEFAULT_TANGENT_SCALE));
             incomingScale.add(Double.valueOf(DEFAULT_TANGENT_SCALE));
+            speedCap.add(Double.valueOf(NO_SPEED_CAP));
         }
 
         public Builder to(Pose waypoint) {
@@ -135,9 +156,18 @@ public final class SplinePath {
          * @param outgoing scale on the tangent handle leaving it
          */
         public Builder to(Pose waypoint, double incoming, double outgoing) {
+            return to(waypoint, incoming, outgoing, NO_SPEED_CAP);
+        }
+
+        /**
+         * @param maxSpeed speed ceiling for the leg arriving at this waypoint, in inches per
+         *                 second, or {@link #NO_SPEED_CAP} for none
+         */
+        public Builder to(Pose waypoint, double incoming, double outgoing, double maxSpeed) {
             waypoints.add(waypoint);
             incomingScale.add(Double.valueOf(incoming));
             outgoingScale.add(Double.valueOf(outgoing));
+            speedCap.add(Double.valueOf(maxSpeed));
             return this;
         }
 
@@ -152,6 +182,7 @@ public final class SplinePath {
             int count = waypoints.size() - 1;
             SplineSegment[] segments = new SplineSegment[count];
             ArcLengthTable[] tables = new ArcLengthTable[count];
+            double[] caps = new double[count];
 
             for (int i = 0; i < count; i++) {
                 Pose a = waypoints.get(i);
@@ -165,8 +196,11 @@ public final class SplinePath {
                 double inMag = chord * incomingScale.get(i + 1).doubleValue();
                 segments[i] = new SplineSegment(a, outMag, b, inMag);
                 tables[i] = new ArcLengthTable(segments[i]);
+                // The cap rides on the waypoint you are driving to, so leg i takes it from
+                // waypoint i + 1.
+                caps[i] = Math.max(speedCap.get(i + 1).doubleValue(), 0.0);
             }
-            return new SplinePath(segments, tables);
+            return new SplinePath(segments, tables, caps);
         }
     }
 }

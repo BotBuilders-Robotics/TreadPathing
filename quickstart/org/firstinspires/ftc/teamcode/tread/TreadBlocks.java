@@ -7,6 +7,7 @@ import org.treadpathing.geometry.MathUtil;
 import org.treadpathing.geometry.Pose;
 import org.treadpathing.route.Route;
 import org.treadpathing.route.RouteBuilder;
+import org.treadpathing.spline.SplinePath;
 
 /**
  * Tread Pathing for the Blocks editor.
@@ -73,6 +74,19 @@ public class TreadBlocks extends BlocksOpModeCompanion {
             parameterDefaultValues = {"34", "60", "0"})
     public static void splineTo(double x, double y, double headingDegrees) {
         require().splineTo(new Pose(x, y, MathUtil.toRadians(headingDegrees)));
+    }
+
+    // Blocks keys its blocks off the method name, so the capped version cannot be an overload
+    // of splineTo the way it is in Java.
+    @ExportToBlocks(
+            heading = "spline to slowly",
+            comment = "Adds a smooth curve to this pose, driven no faster than the given speed. "
+                    + "The cap applies to this leg only.",
+            parameterLabels = {"x (in)", "y (in)", "heading (deg)", "max speed (in/s)"},
+            parameterDefaultValues = {"34", "60", "0", "20"})
+    public static void splineToSlowly(double x, double y, double headingDegrees, double maxSpeed) {
+        require().splineTo(new Pose(x, y, MathUtil.toRadians(headingDegrees)),
+                SplinePath.DEFAULT_TANGENT_SCALE, maxSpeed);
     }
 
     @ExportToBlocks(

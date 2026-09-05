@@ -103,8 +103,23 @@ public final class RouteBuilder {
      *                     waypoint. Larger bulges the curve out; smaller hugs the chord.
      */
     public RouteBuilder splineTo(Pose waypoint, double tangentScale) {
+        return splineTo(waypoint, tangentScale, SplinePath.NO_SPEED_CAP);
+    }
+
+    /**
+     * Adds a spline waypoint that is approached no faster than {@code maxSpeed}.
+     *
+     * <p>The cap governs the leg <b>into</b> this waypoint and nothing after it, so one slow
+     * approach in the middle of a fast route costs you only that leg. It is a ceiling, not a
+     * target: curvature and the wheel-speed limit can still hold the robot below it. Unlike
+     * {@link #constraints}, it does not close the path, so the robot eases down into the slow
+     * leg and back up out of it rather than stopping at either end.
+     *
+     * @param maxSpeed inches per second, or {@link SplinePath#NO_SPEED_CAP} for no cap
+     */
+    public RouteBuilder splineTo(Pose waypoint, double tangentScale, double maxSpeed) {
         ensurePending();
-        pendingPath.to(travelPose(waypoint), tangentScale, tangentScale);
+        pendingPath.to(travelPose(waypoint), tangentScale, tangentScale, maxSpeed);
         pendingWaypoints++;
         cursor = waypoint;
         return this;
@@ -115,13 +130,19 @@ public final class RouteBuilder {
      * line, a turn is inserted first if the robot is not already pointing along it.
      */
     public RouteBuilder lineTo(double x, double y) {
+        return lineTo(x, y, SplinePath.NO_SPEED_CAP);
+    }
+
+    /** As {@link #lineTo(double, double)}, driven no faster than {@code maxSpeed}. */
+    public RouteBuilder lineTo(double x, double y, double maxSpeed) {
         double chord = Math.atan2(y - cursor.getY(), x - cursor.getX());
         double currentTravel = travelHeading(cursor.getHeading());
 
         if (Math.abs(MathUtil.angleDelta(currentTravel, chord)) > defaults.getLineHeadingTolerance()) {
             turnTo(robotHeading(chord));
         }
-        return splineTo(new Pose(x, y, robotHeading(chord)));
+        return splineTo(new Pose(x, y, robotHeading(chord)),
+                SplinePath.DEFAULT_TANGENT_SCALE, maxSpeed);
     }
 
     /**

@@ -48,6 +48,7 @@ public final class TrajectoryGenerator {
         double[] x = new double[count];
         double[] y = new double[count];
         double[] v = new double[count];
+        double[] ceiling = new double[count];
 
         for (int i = 0; i < count; i++) {
             double arc = length * i / intervals;
@@ -57,15 +58,23 @@ public final class TrajectoryGenerator {
             y[i] = p.getY();
             tangent[i] = p.getHeading();
             curvature[i] = path.curvatureAt(arc);
+
+            // The envelope from the constraints, lowered wherever the path itself asks to be
+            // taken slowly. Folding the per-leg cap in here rather than splitting the path at
+            // the leg boundary is what keeps the seam smooth: the sweep below eases down into
+            // a slow leg and back out of it, instead of coming to a stop at each end of it.
+            double limit = constraints.velocityLimit(curvature[i]);
+            double cap = path.speedCapAt(arc);
+            ceiling[i] = cap > 0.0 ? Math.min(limit, cap) : limit;
         }
 
         // Pass 1: forward, accelerating.
-        v[0] = Math.min(constraints.getStartVelocity(), constraints.velocityLimit(curvature[0]));
+        v[0] = Math.min(constraints.getStartVelocity(), ceiling[0]);
         for (int i = 1; i < count; i++) {
             double ds = s[i] - s[i - 1];
             double reachable = MathUtil.reachableVelocity(
                     v[i - 1], constraints.accelerationLimit(curvature[i - 1]), ds);
-            v[i] = Math.min(constraints.velocityLimit(curvature[i]), reachable);
+            v[i] = Math.min(ceiling[i], reachable);
         }
 
         // Pass 2: backward, decelerating.

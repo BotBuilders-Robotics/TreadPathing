@@ -138,7 +138,7 @@ follower.setPose(new Pose(9.0, 60.0, 0.0));
 
 Route route = follower.route()
         .splineTo(new Pose(34.0, 60.0, 0.0))
-        .splineTo(new Pose(52.0, 84.0, Math.toRadians(70.0)))
+        .splineTo(new Pose(52.0, 84.0, Math.toRadians(70.0)), 1.25, 20.0)  // slow approach
         .marker(0.60, raiseArm)          // fires 60% along, without pausing the drive
         .stopAndHold(1.5)                // this is what makes it accurate
         .action(scoreSample)             // blocks the route, holds position while it runs
@@ -169,6 +169,21 @@ Action scoreSample = new Action() {
 };
 ```
 
+### Slowing down for one leg
+
+The third argument to `splineTo` is a speed ceiling in inches per second for the leg **into**
+that waypoint, and nothing after it — one careful approach onto a scoring position does not
+cost you the rest of the auto. The second argument is the tangent scale, which you have to
+spell out to reach the third; `1.25` is the default.
+
+It is a ceiling, not a target: a corner or the wheel-speed limit can still hold the robot
+below it. And it is not `constraints()`, which closes the path and therefore stops the robot
+where it takes effect. The cap goes into the same forward/backward sweep as every other limit,
+so the profile eases down into the slow leg and back up out of it, with no seam.
+
+The visualizer's **max speed** field on a waypoint is the same number, and a capped step shows
+its cap in the route list.
+
 ### The three things people get wrong
 
 **`stopAndHold` is what makes an auto accurate.** Drive segments get the robot roughly where
@@ -194,7 +209,7 @@ started writing Java can still plan and drive an auto:
 ```
 start route at 9, 60 facing 0
 spline to 34, 60 facing 0
-spline to 52, 84 facing 70
+spline to slowly 52, 84 facing 70 at 20
 stop and hold 1.5
 run route
 ```
@@ -348,12 +363,35 @@ velocity D term — it differentiates an already-noisy signal.
 
 ## The visualizer
 
-Open `visualizer.html`. One self-contained file, no install, works offline.
+Open `visualizer.html`. One self-contained file, no install, works offline. On a desktop-sized
+window it does not scroll: the field is sized to the viewport and the side panel scrolls inside
+itself.
 
-**As a path editor:** click the field to add waypoints, drag to move, drag the nose to aim.
+**As a path editor:** click the field to add waypoints, drag to move, drag the nose to aim,
+drag the robot itself to set the start. Every route row carries move up, move down and delete.
 Live curvature and velocity profile underneath, so you can see *why* a pretty curve crawls — at
 0.1 /in curvature with a 14 in track, the wheel-speed limit alone cuts commanded speed by 41%.
 Exports a paste-ready `RouteBuilder` chain.
+
+A selected waypoint has a **tangent scale** and a **max speed** — the cap on the leg into it,
+described above. The rest lives in the tabs:
+
+| tab | what is in it |
+|---|---|
+| start | the starting pose, if you would rather type it than drag it |
+| robot | length, width, track width |
+| limits | velocity, acceleration, deceleration, centripetal, wheel speed |
+| java | the export |
+| field | the field image, its opacity and rotation, and the grid |
+| log | where you drop a datalog |
+
+**Robot length and width are drawing only.** They set the footprint you see and the area you
+can grab to drag the robot, and nothing else. **Track width is real maths:** it is what turns
+path curvature into left and right wheel speeds, so it moves the wheel-speed limit, the peak
+wheel speed readout, and how much a corner costs you. Put in the number your robot actually
+runs — the tuned effective track width from rung 2, not the tape measure, or the tool will
+promise you corners the robot cannot hold. The wheels are drawn straddling it, so a track width
+you typed wrong looks wrong.
 
 **As a log replay:** drop a datalog from OnBotJava on it. A square-test log overlays measured
 pose on planned and reports worst and RMS cross-track error; a ramp log fits kS and kV with an
