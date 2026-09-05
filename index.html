@@ -1401,20 +1401,31 @@ follower.follow(route);
     }
   }
 
+  /**
+   * Pose at time t.
+   *
+   * <p>The route is deliberately still for a beat at each cusp, and during that beat no
+   * segment owns the clock: the one before it has finished, the one after it has not started.
+   * The robot has to hold where it stopped. Falling through to the first sample instead sent
+   * it flicking back to the start of the route at every direction change.
+   */
   function sampleAt(t) {
+    var held = segments.length ? segments[0].trajectory.samples[0] : null;
     for (var i = 0; i < segments.length; i++) {
       var seg = segments[i];
+      var samples = seg.trajectory.samples;
       var local = t - seg.start;
-      if (local < 0) continue;
-      if (local <= seg.trajectory.duration || i === segments.length - 1) {
-        var samples = seg.trajectory.samples;
-        var clamped = Math.min(Math.max(local, 0), seg.trajectory.duration);
+      if (local < 0) {
+        return held;
+      }
+      if (local <= seg.trajectory.duration) {
         var index = 0;
-        while (index < samples.length - 1 && samples[index + 1].time < clamped) index++;
+        while (index < samples.length - 1 && samples[index + 1].time < local) index++;
         return samples[index];
       }
+      held = samples[samples.length - 1];
     }
-    return segments.length ? segments[0].trajectory.samples[0] : null;
+    return held;
   }
 
   function resize() {
