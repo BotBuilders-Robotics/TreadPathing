@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tread Pathing</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
@@ -155,6 +156,18 @@
   }
 
   .hero-copy { display: flex; flex-direction: column; gap: 20px; }
+
+  .brand-mark { display: flex; align-items: center; gap: 9px; color: var(--ink); }
+  .brand-mark svg { width: 26px; height: 26px; flex: none; }
+  .brand-mark .word {
+    font-family: var(--f-display);
+    font-variation-settings: "wdth" 112;
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: -.01em;
+  }
+  .brand-mark .word span { color: var(--primary); }
+
   .hero-copy .lede {
     font-size: 20px;
     color: var(--muted);
@@ -455,6 +468,30 @@
 <header class="hero">
   <div class="shell">
     <div class="hero-copy">
+      <a class="brand-mark" href="index.html" aria-label="Tread Pathing">
+        <svg viewBox="0 0 170 170" aria-hidden="true">
+          <g transform="translate(5,5)">
+            <rect x="15" y="55" width="130" height="50" rx="25" fill="none" stroke="currentColor" stroke-width="10"/>
+            <g stroke="currentColor" stroke-width="6" stroke-linecap="round">
+              <line x1="46" y1="48" x2="46" y2="58"/>
+              <line x1="63" y1="48" x2="63" y2="58"/>
+              <line x1="80" y1="48" x2="80" y2="58"/>
+              <line x1="97" y1="48" x2="97" y2="58"/>
+              <line x1="114" y1="48" x2="114" y2="58"/>
+              <line x1="46" y1="102" x2="46" y2="112"/>
+              <line x1="63" y1="102" x2="63" y2="112"/>
+              <line x1="80" y1="102" x2="80" y2="112"/>
+              <line x1="97" y1="102" x2="97" y2="112"/>
+              <line x1="114" y1="102" x2="114" y2="112"/>
+            </g>
+            <path d="M25,140 C70,150 60,40 150,25" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="25" cy="140" r="9" fill="var(--primary)"/>
+            <circle cx="150" cy="25" r="11" fill="none" stroke="var(--primary)" stroke-width="5"/>
+            <circle cx="150" cy="25" r="4" fill="var(--primary)"/>
+          </g>
+        </svg>
+        <span class="word">Tread <span>Pathing</span></span>
+      </a>
       <div class="badges">
         <span class="badge">100% OnBotJava</span>
         <p class="eyebrow">FIRST Tech Challenge</p>

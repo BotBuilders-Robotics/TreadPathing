@@ -59,14 +59,20 @@ a { color: var(--primary); }
   z-index: 10;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.brand svg { width: 22px; height: 22px; flex: none; }
+.brand .word {
   font-family: var(--f-display);
   font-weight: 700;
   font-size: 16px;
   letter-spacing: -.01em;
-  text-decoration: none;
-  color: var(--ink);
 }
-.brand span { color: var(--primary); }
+.brand .word span { color: var(--primary); }
 .bar nav { display: flex; gap: 18px; margin-left: 8px; }
 .bar nav a {
   font-family: var(--f-display);
