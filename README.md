@@ -35,6 +35,10 @@ for you.
 
 ## Installing it in OnBotJava
 
+The source lives at
+[github.com/BotBuilders-Robotics/TreadPathing](https://github.com/BotBuilders-Robotics/TreadPathing).
+Clone it, or use **Code → Download ZIP** if the machine you are working from has no git.
+
 1. In the OnBotJava editor, create the folder path `org/treadpathing/geometry` (type the path
    with slashes in the new-file dialog; folders are created implicitly).
 2. Paste in each file from `src/org/treadpathing/...`, keeping the package structure. The tree
