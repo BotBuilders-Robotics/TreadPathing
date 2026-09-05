@@ -62,7 +62,7 @@ follower.setPose(new Pose(9.0, 60.0, 0.0));
 
 Route route = follower.route()
         .splineTo(new Pose(34.0, 60.0, 0.0))
-        .splineTo(new Pose(52.0, 84.0, Math.toRadians(70.0)))
+        .splineTo(new Pose(52.0, 84.0, Math.toRadians(70.0)), 1.25, 20.0)  // slow approach
         .marker(0.60, raiseArm)          // fires 60% along, without pausing the drive
         .stopAndHold(1.5)                // this is what makes it accurate
         .action(scoreSample)             // blocks the route, holds position while it runs
@@ -87,6 +87,10 @@ Action scoreSample = new Action() {
     @Override public void start() { claw.setPosition(OPEN); }
     @Override public boolean run() { return !arm.isBusy(); }
 };</code></pre>
+<h3 id="slowing-down-for-one-leg">Slowing down for one leg</h3>
+<p>The third argument to <code>splineTo</code> is a speed ceiling in inches per second for the leg <strong>into</strong> that waypoint, and nothing after it — one careful approach onto a scoring position does not cost you the rest of the auto. The second argument is the tangent scale, which you have to spell out to reach the third; <code>1.25</code> is the default.</p>
+<p>It is a ceiling, not a target: a corner or the wheel-speed limit can still hold the robot below it. And it is not <code>constraints()</code>, which closes the path and therefore stops the robot where it takes effect. The cap goes into the same forward/backward sweep as every other limit, so the profile eases down into the slow leg and back up out of it, with no seam.</p>
+<p>The visualizer&#x27;s <strong>max speed</strong> field on a waypoint is the same number, and a capped step shows its cap in the route list.</p>
 <h3 id="the-three-things-people-get-wrong">The three things people get wrong</h3>
 <p>**<code>stopAndHold</code> is what makes an auto accurate.** Drive segments get the robot roughly where it is going, fast. The pose hold is what gets it exactly there. Put one wherever position matters — before scoring, at the end of the route — and spend your time budget there.</p>
 <p>**<code>reversed()</code> inserts a cusp, and that is not a bug.** The path being accumulated is closed off, the profile decelerates to zero, and a new one starts the other way. Every trajectory begins and ends at rest, so the seam is dynamically feasible. It is the only honest way for a differential drive to change direction.</p>
@@ -96,7 +100,7 @@ Action scoreSample = new Action() {
 <p><code>TreadBlocks.java</code> exposes the route builder to the Blocks editor, so a team that has not started writing Java can still plan and drive an auto:</p>
 <pre><code>start route at 9, 60 facing 0
 spline to 34, 60 facing 0
-spline to 52, 84 facing 70
+spline to slowly 52, 84 facing 70 at 20
 stop and hold 1.5
 run route</code></pre>
 <p>Blocks cannot hold a builder and chain onto it, so the fluent API is flattened into statements against one route the class keeps for you. Inches and degrees throughout, because that is what the field is marked in and what the planner shows.</p>
@@ -139,8 +143,11 @@ omega = w_ref + k * e_theta + b * v_ref * sinc(e_theta) * e_y</code></pre>
 <p>Setting <code>VelocityMode.HUB_PIDF</code> delegates velocity closure to the hub&#x27;s onboard PIDF instead, which runs far faster than the OpMode and sees better encoder data. Never run a Java-side velocity D term — it differentiates an already-noisy signal.</p>
 <hr>
 <h2 id="the-visualizer">The visualizer</h2>
-<p>Open <code>visualizer.html</code>. One self-contained file, no install, works offline.</p>
-<p><strong>As a path editor:</strong> click the field to add waypoints, drag to move, drag the nose to aim. Live curvature and velocity profile underneath, so you can see <em>why</em> a pretty curve crawls — at 0.1 /in curvature with a 14 in track, the wheel-speed limit alone cuts commanded speed by 41%. Exports a paste-ready <code>RouteBuilder</code> chain.</p>
+<p>Open <code>visualizer.html</code>. One self-contained file, no install, works offline. On a desktop-sized window it does not scroll: the field is sized to the viewport and the side panel scrolls inside itself.</p>
+<p><strong>As a path editor:</strong> click the field to add waypoints, drag to move, drag the nose to aim, drag the robot itself to set the start. Every route row carries move up, move down and delete. Live curvature and velocity profile underneath, so you can see <em>why</em> a pretty curve crawls — at 0.1 /in curvature with a 14 in track, the wheel-speed limit alone cuts commanded speed by 41%. Exports a paste-ready <code>RouteBuilder</code> chain.</p>
+<p>A selected waypoint has a <strong>tangent scale</strong> and a <strong>max speed</strong> — the cap on the leg into it, described above. The rest lives in the tabs:</p>
+<div class='scroll'><table><thead><tr><th>tab</th><th>what is in it</th></tr></thead><tbody><tr><td>start</td><td>the starting pose, if you would rather type it than drag it</td></tr><tr><td>robot</td><td>length, width, track width</td></tr><tr><td>limits</td><td>velocity, acceleration, deceleration, centripetal, wheel speed</td></tr><tr><td>java</td><td>the export</td></tr><tr><td>field</td><td>the field image, its opacity and rotation, and the grid</td></tr><tr><td>log</td><td>where you drop a datalog</td></tr></tbody></table></div>
+<p><strong>Robot length and width are drawing only.</strong> They set the footprint you see and the area you can grab to drag the robot, and nothing else. <strong>Track width is real maths:</strong> it is what turns path curvature into left and right wheel speeds, so it moves the wheel-speed limit, the peak wheel speed readout, and how much a corner costs you. Put in the number your robot actually runs — the tuned effective track width from rung 2, not the tape measure, or the tool will promise you corners the robot cannot hold. The wheels are drawn straddling it, so a track width you typed wrong looks wrong.</p>
 <p><strong>As a log replay:</strong> drop a datalog from OnBotJava on it. A square-test log overlays measured pose on planned and reports worst and RMS cross-track error; a ramp log fits kS and kV with an r² so you know whether to trust it.</p>
 <h3 id="the-duplication-and-what-keeps-it-honest">The duplication, and what keeps it honest</h3>
 <p>The spline and profile maths exists twice: Java on the robot, JavaScript in the tool. That was a deliberate call — the alternative is shipping a toolchain, which defeats the point of an OnBotJava library. But two implementations drift, and a visualizer that draws a path the robot will not drive is worse than no visualizer.</p>
