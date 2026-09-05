@@ -21,12 +21,22 @@ import java.io.Writer;
  *
  * <p>Writes are buffered and flushed on {@link #close()}. Call close in your OpMode's
  * {@code stop()} or a {@code finally} block; a log that is never closed loses its tail.
+ *
+ * <p>A run never overwrites the one before it. If {@code tread_square.txt} exists the next
+ * run writes {@code tread_square_2.txt}, then {@code _3}, and so on. Losing a tuning run you
+ * cannot repeat is worse than a full directory — but a full directory is a real cost on a
+ * Control Hub, so {@link #disabled()} gives you a logger that writes nothing at all, and
+ * {@link #getPath()} tells you which file a run actually landed in.
  */
 public final class Datalogger {
 
     public static final String DEFAULT_DIRECTORY = "/sdcard/FIRST/java/src/Datalogs";
 
+    /** Highest suffix tried before a run gives up and writes nothing. */
+    public static final int MAX_RUNS = 999;
+
     private final Writer writer;
+    private final String path;
     private final int columns;
     private final StringBuilder line = new StringBuilder(256);
     private boolean closed;
@@ -43,27 +53,74 @@ public final class Datalogger {
     public Datalogger(String directory, String filename, String[] headers) {
         this.columns = headers.length;
         Writer opened = null;
+        String target = null;
         try {
             File folder = new File(directory);
             if (!folder.exists()) {
                 folder.mkdirs();
             }
-            opened = new BufferedWriter(new FileWriter(new File(folder, filename + ".txt")), 8192);
-            opened.write("seconds");
-            for (int i = 0; i < headers.length; i++) {
-                opened.write(",");
-                opened.write(headers[i]);
+            File file = freeFile(folder, filename);
+            if (file != null) {
+                opened = new BufferedWriter(new FileWriter(file), 8192);
+                opened.write("seconds");
+                for (int i = 0; i < headers.length; i++) {
+                    opened.write(",");
+                    opened.write(headers[i]);
+                }
+                opened.write("\n");
+                target = file.getPath();
             }
-            opened.write("\n");
         } catch (IOException failure) {
             // A missing SD card or a permissions problem must never take an auto down with it.
             opened = null;
+            target = null;
         }
         this.writer = opened;
+        this.path = target;
+    }
+
+    /** A logger that writes nothing, for wiring a test up with its logging switched off. */
+    public static Datalogger disabled() {
+        return new Datalogger();
+    }
+
+    private Datalogger() {
+        this.columns = 0;
+        this.writer = null;
+        this.path = null;
+    }
+
+    /**
+     * The first free name in the series: {@code name.txt}, then {@code name_2.txt} upward.
+     *
+     * @return null when every name up to {@link #MAX_RUNS} is taken, which is the one case
+     *         where a run writes nothing rather than overwriting somebody's data
+     */
+    private static File freeFile(File folder, String filename) {
+        File first = new File(folder, filename + ".txt");
+        if (!first.exists()) {
+            return first;
+        }
+        for (int run = 2; run <= MAX_RUNS; run++) {
+            File candidate = new File(folder, filename + "_" + run + ".txt");
+            if (!candidate.exists()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     public boolean isOpen() {
         return writer != null && !closed;
+    }
+
+    /**
+     * Full path of the file this run is writing, or null when it is writing nothing. Worth
+     * putting on telemetry: with names that rotate, this is how you know which file to
+     * download.
+     */
+    public String getPath() {
+        return path;
     }
 
     /** Writes one row. Extra values past the declared column count are ignored. */

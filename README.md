@@ -128,6 +128,15 @@ So tuning goes through gamepad plus telemetry, and through CSV logs. `Datalogger
 in the editor's file browser with a one-click download. Drop it on `visualizer.html` and you
 get the plots — offline instead of live, but with a record you can keep between matches.
 
+**Every run writes its own file.** The first square test is `tread_square.txt`, the next is
+`tread_square_2.txt`, and so on: a tuning run you cannot repeat is worth more than a tidy
+directory. The OpMode's telemetry names the file it opened, which is the one to download.
+
+That does mean the directory only grows, so each tuning OpMode has a `LOGGING` constant at the
+top — set it false and the run writes nothing. In your own OpModes, `Datalogger.disabled()`
+returns a logger that swallows every write, so the logging can go on or off without the code
+around it changing shape.
+
 ---
 
 ## Writing an auto

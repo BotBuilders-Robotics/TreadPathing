@@ -40,6 +40,13 @@ public class SquareTest extends LinearOpMode {
 
     public static final double SIDE_INCHES = 48.0;
 
+    /**
+     * Set false to run this test without writing a log file. Each run writes a new one --
+     * tread_square.txt, then tread_square_2.txt -- so a directory you never clear out
+     * only ever grows.
+     */
+    public static final boolean LOGGING = true;
+
     @Override
     public void runOpMode() {
         Follower follower = Constants.buildFollower(hardwareMap);
@@ -62,15 +69,19 @@ public class SquareTest extends LinearOpMode {
         telemetry.addLine(route.summary());
         telemetry.addLine();
         telemetry.addLine("Place the robot at (24, 24) facing +x.");
-        telemetry.addLine("Log: FIRST/java/src/Datalogs/tread_square.txt");
+        telemetry.addLine(LOGGING
+                ? "Log: FIRST/java/src/Datalogs/tread_square.txt, a new file each run"
+                : "Logging is off.");
         telemetry.update();
 
         waitForStart();
 
-        Datalogger log = new Datalogger("tread_square", new String[] {
+        Datalogger log = LOGGING
+                ? new Datalogger("tread_square", new String[] {
                 "refX", "refY", "refHeading", "refV",
                 "x", "y", "heading", "v",
-                "alongTrack", "crossTrack", "headingError", "loopHz"});
+                "alongTrack", "crossTrack", "headingError", "loopHz"})
+                : Datalogger.disabled();
 
         double worstCrossTrack = 0.0;
         double startTime = follower.time();
@@ -111,10 +122,16 @@ public class SquareTest extends LinearOpMode {
             log.close();
         }
 
+        // Captured before the readout loop: with a name per run, the one thing you need off
+        // this screen is which file to download.
+        String written = log.getPath();
         double closure = follower.getPose().distanceTo(start);
         while (opModeIsActive()) {
             telemetry.addData("worst cross-track (in)", "%.2f", worstCrossTrack);
             telemetry.addData("square closure error (in)", "%.2f", closure);
+            if (written != null) {
+                telemetry.addData("log", written);
+            }
             telemetry.addLine();
             telemetry.addLine(closure > 3.0
                     ? "Closure is poor - suspect ticksPerInch or trackWidth, not the gains."

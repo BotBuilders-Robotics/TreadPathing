@@ -33,15 +33,24 @@ public class RampTest extends LinearOpMode {
     public static final double RAMP_SECONDS = 10.0;
     public static final double MAX_DISTANCE_INCHES = 110.0;
 
+    /**
+     * Set false to run this test without writing a log file. Each run writes a new one --
+     * tread_ramp.txt, then tread_ramp_2.txt -- so a directory you never clear out
+     * only ever grows.
+     */
+    public static final boolean LOGGING = true;
+
     @Override
     public void runOpMode() {
         Follower follower = Constants.buildFollower(hardwareMap);
-        Datalogger log = new Datalogger("tread_ramp", new String[] {
-                "power", "leftVel", "rightVel", "avgVel", "distance", "voltage"});
+        Datalogger log = LOGGING
+                ? new Datalogger("tread_ramp", new String[] {
+                "power", "leftVel", "rightVel", "avgVel", "distance", "voltage"})
+                : Datalogger.disabled();
 
         telemetry.addLine("Clear " + (int) MAX_DISTANCE_INCHES + " inches ahead of the robot.");
         telemetry.addLine("Right bumper ramps FORWARD, left bumper ramps BACKWARD.");
-        telemetry.addLine("Log: FIRST/java/src/Datalogs/tread_ramp.txt");
+        telemetry.addLine(log.isOpen() ? "Log: " + log.getPath() : "Logging is off.");
         telemetry.update();
 
         waitForStart();
