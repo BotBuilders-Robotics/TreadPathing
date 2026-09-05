@@ -34,6 +34,7 @@
 
     --shell: 1180px;
     --prose: 66ch;
+    --ease: cubic-bezier(.16,1,.3,1);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -157,7 +158,7 @@
 
   .hero-copy { display: flex; flex-direction: column; gap: 20px; }
 
-  .brand-mark { display: flex; align-items: center; gap: 9px; color: var(--ink); }
+  .brand-mark { display: flex; align-items: center; gap: 9px; color: var(--ink); text-decoration: none; }
   .brand-mark svg { width: 26px; height: 26px; flex: none; }
   .brand-mark .word {
     font-family: var(--f-display);
@@ -189,7 +190,7 @@
     white-space: nowrap;
   }
 
-  .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .cta { display: flex; gap: 16px; flex-wrap: wrap; }
   .btn {
     font-family: var(--f-display);
     font-variation-settings: "wdth" 104;
@@ -205,8 +206,39 @@
     display: inline-block;
   }
   .btn.ghost { background: transparent; color: var(--primary); }
-  .btn:hover { opacity: .87; }
   .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* magnetic + cursor-glow: a padded field zone starts the pull before the cursor touches
+     the button, displacement is clamped, and release springs back to rest (physics-driven
+     via the script below, not a fixed-duration tween) -- Motion UI's own magnetic-button
+     mechanism, scaled down from its published 26px max: three buttons this close together
+     would pull into each other and overlap at that size. Also shows a soft radial glow
+     tracking the pointer, independent of the pull. Pure-CSS fallback (centered glow) when
+     JS is off. */
+  .btn.magnetic {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition: box-shadow .35s var(--ease);
+  }
+  .btn.magnetic::before {
+    content: "";
+    position: absolute;
+    inset: -60%;
+    background: radial-gradient(110px circle at var(--gx, 50%) var(--gy, 50%), rgba(255,255,255,.4), transparent 68%);
+    opacity: 0;
+    transition: opacity .3s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .btn.magnetic.ghost::before {
+    background: radial-gradient(110px circle at var(--gx, 50%) var(--gy, 50%), color-mix(in srgb, var(--primary) 45%, transparent), transparent 68%);
+  }
+  .btn.magnetic:hover::before, .btn.magnetic:focus-visible::before { opacity: 1; }
+  .btn.magnetic > span { position: relative; z-index: 1; }
+  .btn.magnetic:hover, .btn.magnetic:focus-visible {
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--primary) 55%, transparent);
+  }
 
   .facts {
     display: flex;
@@ -221,11 +253,38 @@
 
   .demo {
     position: relative;
+    isolation: isolate;
     border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--surface);
     padding: 10px 10px 6px;
   }
+  /* border-beam: a thin arc of light sweeping the box's border on a loop -- Motion UI's own
+     component (size = degrees of arc lit, duration = seconds per lap, thickness = px).
+     The angle animates via a custom property, not a transform on the element -- rotating
+     the masked pseudo-element as a whole would swing its corners outside the box at 45deg
+     (a square's diagonal exceeds its side length), spilling paint past the edge. This way
+     the masked shape never moves; only the light sweeping inside it does. */
+  @property --beam-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  .demo::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    --beam-angle: 0deg;
+    background: conic-gradient(from var(--beam-angle), transparent 0deg, var(--primary) 120deg, transparent 150deg, transparent 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: border-beam-spin 6s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes border-beam-spin { to { --beam-angle: 360deg; } }
   .demo canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: grab; }
   .demo canvas:active { cursor: grabbing; }
   .demo .cap {
@@ -457,8 +516,51 @@
   footer a:hover { color: var(--primary); }
   footer .grow { flex: 1; }
 
+  /* ---------------- headline: each word masked, rising from behind a clip while
+     resolving blur -> sharp focus, staggered per word ---------------- */
+
+  .word-mask { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .14em; margin-bottom: -.14em; }
+  .word-mask span {
+    display: inline-block;
+    transform: translateY(112%);
+    filter: blur(9px);
+    opacity: 0;
+    transition: transform .85s var(--ease), filter .7s var(--ease), opacity .6s linear;
+    transition-delay: calc(var(--w, 0) * 60ms);
+    will-change: transform, filter, opacity;
+  }
+  .reveal-headline.in .word-mask span { transform: translateY(0); filter: blur(0); opacity: 1; }
+
+  /* ---------------- hero cascade: lede/cta/facts stagger in right after the headline
+     settles (Motion UI's headline-then-followers pattern), instead of appearing instantly.
+     Delay is baked in here -- the JS reveal system below is unchanged. ---------------- */
+
+  .hero-follow { transition-delay: calc(.95s + var(--i, 0) * 90ms); }
+
+  /* ---------------- scroll reveal: fade + rise, staggered per card/list group,
+     fires once when a section enters the viewport ---------------- */
+
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s var(--ease), transform .6s var(--ease); }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+  .stagger > * { transition-delay: calc(var(--i, 0) * 70ms); }
+
+  .card, a.doc, ol.steps li {
+    transition: box-shadow .35s var(--ease), border-color .35s var(--ease), opacity .6s var(--ease);
+  }
+  .needs > div { transition: transform .35s var(--ease), box-shadow .35s var(--ease), opacity .6s var(--ease); }
+  .needs > div:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -14px rgba(0,0,0,.28); }
+  .card:hover, a.doc:hover { box-shadow: 0 10px 24px -14px rgba(0,0,0,.28); }
+  ol.steps li:hover { background: var(--sunk); }
+
+  /* ---------------- tilt: a restrained (~5deg) pointer-reactive 3D lean -- Motion UI's
+     actual card interaction; they have no cursor-glow card at all (confirmed against the
+     live component gallery). Spring-driven via the script below for real weight. ---------------- */
+
+  .tilt { will-change: transform; }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
+    .btn.magnetic::before { display: none !important; }
   }
 </style>
 </head>
@@ -468,7 +570,7 @@
 <header class="hero">
   <div class="shell">
     <div class="hero-copy">
-      <a class="brand-mark" href="index.html" aria-label="Tread Pathing">
+      <a class="brand-mark" href="/" aria-label="Tread Pathing">
         <svg viewBox="0 0 170 170" aria-hidden="true">
           <g transform="translate(5,5)">
             <rect x="15" y="55" width="130" height="50" rx="25" fill="none" stroke="currentColor" stroke-width="10"/>
@@ -496,14 +598,14 @@
         <span class="badge">100% OnBotJava</span>
         <p class="eyebrow">FIRST Tech Challenge</p>
       </div>
-      <h1>A pathing library for tank&nbsp;bots.</h1>
-      <p class="lede">Tell the robot <b>where to go</b> and it works out the speed, the steering and the stopping. Written to run <b>in the browser tab you already have open</b> — no Android Studio, nothing to install.</p>
-      <div class="cta">
-        <a class="btn" href="#first-hour">Start here</a>
-        <a class="btn ghost" id="plannerLink" href="#">Open the path planner</a>
-        <a class="btn ghost" data-doc="repo" href="https://github.com/BotBuilders-Robotics/TreadPathing">Get the code</a>
+      <h1 class="reveal reveal-headline" id="heroHeadline"><span class="word-mask"><span style="--w:0">A</span></span> <span class="word-mask"><span style="--w:1">pathing</span></span> <span class="word-mask"><span style="--w:2">library</span></span> <span class="word-mask"><span style="--w:3">for</span></span> <span class="word-mask"><span style="--w:4">tank&nbsp;bots.</span></span></h1>
+      <p class="lede reveal hero-follow" style="--i:0">Tell the robot <b>where to go</b> and it works out the speed, the steering and the stopping. Written to run <b>in the browser tab you already have open</b> — no Android Studio, nothing to install.</p>
+      <div class="cta reveal hero-follow" style="--i:1">
+        <a class="btn magnetic" href="#first-hour"><span>Start here</span></a>
+        <a class="btn ghost magnetic" id="plannerLink" href="#"><span>Open the path planner</span></a>
+        <a class="btn ghost magnetic" data-doc="repo" href="https://github.com/BotBuilders-Robotics/TreadPathing"><span>Get the code</span></a>
       </div>
-      <div class="facts">
+      <div class="facts reveal hero-follow" style="--i:2">
         <span><b>Tank</b> &amp; 6-wheel drive</span>
         <span>Paste in, <b>Build Everything</b>, done</span>
         <span>Inches and degrees</span>
@@ -525,14 +627,14 @@
 
   <section id="onbotjava">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">The part the other path libraries can&#39;t do</p>
         <h2>It runs entirely in OnBotJava.</h2>
         <p>Pedro Pathing&#39;s own docs say it does not work in OnBotJava. Road Runner is built for Android Studio. If your team codes in a browser on a school laptop, path following has effectively been closed to you — that is the specific problem this library exists to solve.</p>
       </div>
 
-      <div class="needs">
-        <div class="without">
+      <div class="needs stagger">
+        <div class="without reveal" style="--i:0">
           <h3>What you don&#39;t need</h3>
           <ul>
             <li><span class="m">&#10005;</span><span><span class="gone">Android Studio</span><em>A 10&nbsp;GB install, on a laptop you may not be allowed to install on</em></span></li>
@@ -542,7 +644,7 @@
           </ul>
         </div>
 
-        <div class="with">
+        <div class="with reveal" style="--i:1">
           <h3>What you actually do</h3>
           <ul>
             <li><span class="m">1</span><span>Paste the <b>org/treadpathing</b> folders into the OnBotJava editor, keeping the folder names</span></li>
@@ -553,7 +655,7 @@
         </div>
       </div>
 
-      <div class="honest">
+      <div class="honest reveal">
         <span class="h">Two things that follow from this</span>
         <p><b class="lead">Tuning happens through telemetry and log files, not a live dashboard.</b> FTC Dashboard serves its screen out of Android assets, which OnBotJava cannot load — so instead, runs are logged to <code>FIRST/java/src/Datalogs</code>, which shows up in the OnBotJava file browser with a one-click download. Drop the file on the path planner and you get the plots.</p>
         <p><b class="lead">It is 51 files, and your Control Hub compiles all of them.</b> Nobody has published how long that takes. Time it on your hub before you rely on it, and if it drags, delete the odometry classes your robot does not have.</p>
@@ -564,14 +666,14 @@
 
   <section id="why">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">The thing you already ran into</p>
         <h2>Your autonomous is a stopwatch.</h2>
         <p>Here is the same thirty seconds, written both ways. The one on the left is what almost every rookie team has in their code right now.</p>
       </div>
 
-      <div class="versus">
-        <div class="card before">
+      <div class="versus stagger">
+        <div class="card before tilt reveal" style="--i:0">
           <span class="tag">what you have</span>
 <pre><code>leftDrive.setPower(0.5);
 rightDrive.setPower(0.5);
@@ -586,7 +688,7 @@ rightDrive.setPower(0.0);</code></pre>
           <p class="why">Every number is a stopwatch reading that was true once. <b>A fresh battery overshoots. A worn one comes up short.</b> Nothing in this code knows where the robot is, so nothing can notice it went wrong.</p>
         </div>
 
-        <div class="card after">
+        <div class="card after tilt reveal" style="--i:1">
           <span class="tag">what you write instead</span>
 <pre><code>Route route = follower.route()
         .splineTo(<span class="k">new</span> Pose(34, 60, 0))
@@ -605,14 +707,14 @@ follower.follow(route);
 
   <section id="gotchas">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">Read these three before you write a route</p>
         <h2>Three things that trip everyone up.</h2>
         <p>A tank drive cannot slide sideways. Everything strange about writing routes for one comes back to that.</p>
       </div>
 
-      <div class="gotchas">
-        <div class="gotcha">
+      <div class="gotchas stagger">
+        <div class="gotcha reveal" style="--i:0">
           <span class="rule">Headings point the nose</span>
           <figure>
             <svg viewBox="0 0 300 130" role="img" aria-label="A robot at a waypoint with an arrow out of its front, labelled 45 degrees.">
@@ -636,7 +738,7 @@ follower.follow(route);
           <p>Every pose you write is where the robot's <strong>nose</strong> points, which is what you see standing at the field. Not the direction the path happens to be going.</p>
         </div>
 
-        <div class="gotcha">
+        <div class="gotcha reveal" style="--i:1">
           <span class="rule">stopAndHold is the accurate bit</span>
           <figure>
             <svg viewBox="0 0 300 130" role="img" aria-label="A path arriving at a target square, with the last inch marked as the pose hold.">
@@ -650,7 +752,7 @@ follower.follow(route);
           <p>Driving gets the robot <em>roughly</em> there, fast. The pose hold is what gets it <strong>exactly</strong> there. Put one wherever you are about to score.</p>
         </div>
 
-        <div class="gotcha">
+        <div class="gotcha reveal" style="--i:2">
           <span class="rule">reversed() means it stops first</span>
           <figure>
             <svg viewBox="0 0 300 130" role="img" aria-label="A path that comes to a stop and then heads back the other way, with the stop marked as a cusp.">
@@ -669,14 +771,14 @@ follower.follow(route);
 
   <section class="hour" id="first-hour">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">Do these in order &middot; about an hour</p>
         <h2>Your first hour, on your own robot.</h2>
         <p>Each step depends on the one before it. Skipping ahead is the single most common reason a route comes out wrong, because a follower tuned on a bad measurement cannot be tuned.</p>
       </div>
 
-      <ol class="steps">
-        <li>
+      <ol class="steps stagger">
+        <li class="reveal" style="--i:0">
           <span class="n">1</span>
           <span class="what">
             <b>Paste the library in</b>
@@ -684,7 +786,7 @@ follower.follow(route);
           </span>
           <a class="go" data-doc="install" href="#">Install &rarr;</a>
         </li>
-        <li>
+        <li class="reveal" style="--i:1">
           <span class="n">2</span>
           <span class="what">
             <b>Check nothing is backwards</b>
@@ -692,7 +794,7 @@ follower.follow(route);
           </span>
           <a class="go" data-doc="localization-test" href="#">Rung 0 &rarr;</a>
         </li>
-        <li>
+        <li class="reveal" style="--i:2">
           <span class="n">3</span>
           <span class="what">
             <b>Measure ticks per inch</b>
@@ -700,7 +802,7 @@ follower.follow(route);
           </span>
           <a class="go" data-doc="push-test" href="#">Rung 1 &rarr;</a>
         </li>
-        <li>
+        <li class="reveal" style="--i:3">
           <span class="n">4</span>
           <span class="what">
             <b>Measure your track width</b>
@@ -708,7 +810,7 @@ follower.follow(route);
           </span>
           <a class="go" data-doc="spin-test" href="#">Rung 2 &rarr;</a>
         </li>
-        <li>
+        <li class="reveal" style="--i:4">
           <span class="n">5</span>
           <span class="what">
             <b>Drive one line and come back</b>
@@ -722,39 +824,39 @@ follower.follow(route);
 
   <section id="docs">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">Documentation</p>
         <h2>Read next.</h2>
         <p>Grouped by when you will actually need them, not by how the code is organised.</p>
       </div>
 
-      <div class="docs">
-        <a class="doc" data-doc="getting-started" href="#">
+      <div class="docs stagger">
+        <a class="doc tilt reveal" style="--i:0" data-doc="getting-started" href="#">
           <span class="when">Start of the season</span>
           <h3>Getting started</h3>
           <p>Installing in OnBotJava, the coordinate frame, and the one file you edit.</p>
         </a>
-        <a class="doc" data-doc="tuning" href="#">
+        <a class="doc tilt reveal" style="--i:1" data-doc="tuning" href="#">
           <span class="when">Before your first route</span>
           <h3>The tuning ladder</h3>
           <p>Ten steps from motor directions to follower gains, each with the OpMode that measures it.</p>
         </a>
-        <a class="doc" data-doc="routes" href="#">
+        <a class="doc tilt reveal" style="--i:2" data-doc="routes" href="#">
           <span class="when">Writing an auto</span>
           <h3>Writing routes</h3>
           <p>Waypoints, turns, holds, reversing, and firing your arm part-way along a path.</p>
         </a>
-        <a class="doc" data-doc="odometry" href="#">
+        <a class="doc tilt reveal" style="--i:3" data-doc="odometry" href="#">
           <span class="when">When you add dead wheels</span>
           <h3>Odometry options</h3>
           <p>Drive encoders, two pods, or a Pinpoint — what each costs you and what it buys.</p>
         </a>
-        <a class="doc" data-doc="troubleshooting" href="#">
+        <a class="doc tilt reveal" style="--i:4" data-doc="troubleshooting" href="#">
           <span class="when">When it drives wrong</span>
           <h3>Troubleshooting</h3>
           <p>Symptom first: it cuts corners, it oscillates, it drifts during turns, it ends up sideways.</p>
         </a>
-        <a class="doc" data-doc="how-it-works" href="#">
+        <a class="doc tilt reveal" style="--i:5" data-doc="how-it-works" href="#">
           <span class="when">When you are curious</span>
           <h3>How it works</h3>
           <p>Splines, velocity profiles, and why a tank drive needs a different follower from a mecanum one.</p>
@@ -765,18 +867,18 @@ follower.follow(route);
 
   <section id="fit">
     <div class="shell">
-      <div class="section-head">
+      <div class="section-head reveal">
         <p class="eyebrow">Before you spend an evening on it</p>
         <h2>Will this work on your robot?</h2>
       </div>
 
-      <div class="fit">
-        <div class="yes"><span class="mark">yes</span><span class="t">Tank, 6-wheel drop-centre, or any <b>skid-steer</b> drivetrain</span></div>
-        <div class="yes"><span class="mark">yes</span><span class="t">You program in <b>OnBotJava</b>, in a browser, with no Android Studio</span></div>
-        <div class="yes"><span class="mark">yes</span><span class="t">You only have <b>drive motor encoders</b> — start here, add pods later</span></div>
-        <div class="yes"><span class="mark">yes</span><span class="t">You use Android Studio and want to drop it into <b>TeamCode</b></span></div>
-        <div class="maybe"><span class="mark">?</span><span class="t">Your Robot Controller is an <b>older phone</b> — external code needs Android 7.0 or newer</span></div>
-        <div class="no"><span class="mark">no</span><span class="t"><b>Mecanum or swerve</b> — use Pedro Pathing or Road Runner, they are better at it</span></div>
+      <div class="fit stagger">
+        <div class="yes reveal" style="--i:0"><span class="mark">yes</span><span class="t">Tank, 6-wheel drop-centre, or any <b>skid-steer</b> drivetrain</span></div>
+        <div class="yes reveal" style="--i:1"><span class="mark">yes</span><span class="t">You program in <b>OnBotJava</b>, in a browser, with no Android Studio</span></div>
+        <div class="yes reveal" style="--i:2"><span class="mark">yes</span><span class="t">You only have <b>drive motor encoders</b> — start here, add pods later</span></div>
+        <div class="yes reveal" style="--i:3"><span class="mark">yes</span><span class="t">You use Android Studio and want to drop it into <b>TeamCode</b></span></div>
+        <div class="maybe reveal" style="--i:4"><span class="mark">?</span><span class="t">Your Robot Controller is an <b>older phone</b> — external code needs Android 7.0 or newer</span></div>
+        <div class="no reveal" style="--i:5"><span class="mark">no</span><span class="t"><b>Mecanum or swerve</b> — use Pedro Pathing or Road Runner, they are better at it</span></div>
       </div>
 
     </div>
@@ -1505,6 +1607,158 @@ follower.follow(route);
     draw();
   } else {
     window.requestAnimationFrame(frame);
+  }
+}());
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ------------------------------------------------------------------ entrance animations
+  //
+  // Headline mask-reveal, a hero cascade, magnetic + cursor-glow buttons, card tilt, and a
+  // general scroll reveal for the rest of the page. All gated the same way as the hero
+  // canvas above: prefers-reduced-motion settles everything into its resting state
+  // immediately instead of skipping the feature outright, so the page still reads
+  // correctly with no animation.
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var revealEls = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+
+  function settle(el) { el.classList.add('in'); }
+
+  var observer = 'IntersectionObserver' in window ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 }) : null;
+
+  revealEls.forEach(function (el) {
+    if (reduceMotion || !observer) { settle(el); return; }
+    observer.observe(el);
+  });
+
+  if (!reduceMotion) {
+    // ------------------------------------------------------------ shared spring driver
+    //
+    // A hand-rolled critically-underdamped spring, stepped in a single shared rAF loop.
+    // Used for both the magnetic-button pull and the card tilt below, matching Motion UI's
+    // real mechanism: pointer-following motion is spring-driven, not a fixed-duration
+    // tween, so releasing the pointer has real weight/settle rather than snapping back
+    // linearly.
+
+    function Spring(stiffness, damping, mass) {
+      this.k = stiffness; this.c = damping; this.m = mass;
+      this.value = 0; this.velocity = 0; this.target = 0;
+    }
+    Spring.prototype.step = function (dt) {
+      var force = -this.k * (this.value - this.target) - this.c * this.velocity;
+      this.velocity += (force / this.m) * dt;
+      this.value += this.velocity * dt;
+    };
+    Spring.prototype.atRest = function () {
+      return Math.abs(this.value - this.target) < 0.05 && Math.abs(this.velocity) < 0.05;
+    };
+
+    var springEntries = [];
+    var springRaf = null;
+    function ensureSpringLoop() {
+      if (springRaf) return;
+      var last = performance.now();
+      springRaf = requestAnimationFrame(function frame(now) {
+        var dt = Math.min((now - last) / 1000, 0.032);
+        last = now;
+        var stillActive = false;
+        springEntries.forEach(function (entry) {
+          entry.springs.forEach(function (s) { s.step(dt); if (!s.atRest()) stillActive = true; });
+          entry.render();
+        });
+        springRaf = stillActive ? requestAnimationFrame(frame) : null;
+      });
+    }
+
+    // ------------------------------------------------------------ magnetic buttons
+    //
+    // A padded field zone around each button starts the pull before the cursor actually
+    // touches it, displacement is clamped, and release springs back to rest -- Motion UI's
+    // published algorithm (pullStrength 0.35, maxPull 26px), scaled down (see the CSS
+    // comment above) since these three buttons sit close together.
+
+    var FIELD_PAD = 18, PULL_STRENGTH = 0.35, MAX_PULL = 6;
+
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    var magnets = Array.prototype.slice.call(document.querySelectorAll('.btn.magnetic'));
+    magnets.forEach(function (btn) {
+      var sx = new Spring(210, 22, 1), sy = new Spring(210, 22, 1);
+      springEntries.push({
+        springs: [sx, sy],
+        render: function () { btn.style.transform = 'translate(' + sx.value.toFixed(2) + 'px,' + sy.value.toFixed(2) + 'px)'; }
+      });
+      btn._magnetic = { sx: sx, sy: sy };
+
+      // The glow only appears once the cursor is truly over the button (CSS :hover-driven
+      // opacity); it tracks the pointer within the button's own box, independent of the
+      // wider field zone that drives the pull.
+      btn.addEventListener('mousemove', function (e) {
+        var rect = btn.getBoundingClientRect();
+        btn.style.setProperty('--gx', ((e.clientX - rect.left) / rect.width * 100).toFixed(1) + '%');
+        btn.style.setProperty('--gy', ((e.clientY - rect.top) / rect.height * 100).toFixed(1) + '%');
+      });
+    });
+
+    if (magnets.length) {
+      document.addEventListener('pointermove', function (e) {
+        magnets.forEach(function (btn) {
+          var m = btn._magnetic;
+          var rect = btn.getBoundingClientRect();
+          var within = e.clientX > rect.left - FIELD_PAD && e.clientX < rect.right + FIELD_PAD &&
+                       e.clientY > rect.top - FIELD_PAD && e.clientY < rect.bottom + FIELD_PAD;
+          if (within) {
+            var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            m.sx.target = clamp((e.clientX - cx) * PULL_STRENGTH, -MAX_PULL, MAX_PULL);
+            m.sy.target = clamp((e.clientY - cy) * PULL_STRENGTH, -MAX_PULL, MAX_PULL);
+          } else {
+            m.sx.target = 0; m.sy.target = 0;
+          }
+        });
+        ensureSpringLoop();
+      });
+    }
+
+    // ------------------------------------------------------------ card tilt
+    //
+    // A restrained (~5deg) pointer-reactive 3D lean -- Motion UI's actual card interaction;
+    // they have no cursor-glow card at all (confirmed against the live component gallery).
+
+    var MAX_TILT = 5;
+    var tilts = Array.prototype.slice.call(document.querySelectorAll('.tilt'));
+    tilts.forEach(function (el) {
+      var rx = new Spring(180, 18, 1), ry = new Spring(180, 18, 1);
+      springEntries.push({
+        springs: [rx, ry],
+        render: function () {
+          el.style.transform = 'perspective(700px) rotateX(' + rx.value.toFixed(2) + 'deg) rotateY(' + ry.value.toFixed(2) + 'deg)';
+        }
+      });
+      el.addEventListener('pointermove', function (e) {
+        var rect = el.getBoundingClientRect();
+        var px = (e.clientX - rect.left) / rect.width - 0.5;
+        var py = (e.clientY - rect.top) / rect.height - 0.5;
+        ry.target = px * MAX_TILT * 2;
+        rx.target = -py * MAX_TILT * 2;
+        ensureSpringLoop();
+      });
+      el.addEventListener('pointerleave', function () {
+        rx.target = 0; ry.target = 0;
+        ensureSpringLoop();
+      });
+    });
   }
 }());
 </script>
