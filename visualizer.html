@@ -405,6 +405,12 @@
         <button id="toggleReverse">+ reverse/forward</button>
       </div>
       <div class="row">
+        <button id="saveRoute">save</button>
+        <button id="loadRoute">load</button>
+        <input type="file" id="routeInput" accept=".json,application/json" style="display:none">
+        <span class="hint" id="routeState"></span>
+      </div>
+      <div class="row">
         <button id="clearRoute" class="danger">clear</button>
         <button id="loadExample">example</button>
       </div>
@@ -1787,6 +1793,199 @@
     refresh();
   }
 
+  // ---------------------------------------------------------------- save and load
+  //
+  // A route is worth keeping: it is the shape of an auto, arrived at by dragging, and it
+  // should survive a closed tab and travel between the laptop that planned it and the one at
+  // the competition. So it saves as a small JSON file you can keep next to the OpMode it
+  // belongs to, or commit alongside the code.
+  //
+  // Inches, degrees and seconds, whichever unit the page is showing -- the same choice the
+  // Java export makes, and for the same reason: the library works in inches, so a file that
+  // quietly held centimetres would be a trap.
+
+  var ROUTE_FORMAT = 'tread-route';
+  var ROUTE_VERSION = 1;
+
+  function routeDocument() {
+    var steps = [];
+    for (var i = 0; i < state.steps.length; i++) {
+      var step = state.steps[i];
+      if (step.type === 'waypoint') {
+        var saved = {
+          type: 'waypoint',
+          x: round2(step.x),
+          y: round2(step.y),
+          heading: round2(step.heading / DEG)
+        };
+        // Only what was actually chosen: a file full of defaults is harder to read and
+        // harder to hand-edit.
+        if (step.tangentScale && Math.abs(step.tangentScale - TM.DEFAULT_TANGENT_SCALE) > 1e-9) {
+          saved.tangentScale = round2(step.tangentScale);
+        }
+        if (step.maxSpeed > 0) {
+          saved.maxSpeed = round2(step.maxSpeed);
+        }
+        steps.push(saved);
+      } else if (step.type === 'turn') {
+        steps.push({ type: 'turn', heading: round2(step.heading / DEG) });
+      } else if (step.type === 'hold' || step.type === 'wait') {
+        steps.push({ type: step.type, seconds: round2(step.seconds) });
+      } else if (step.type === 'reverse') {
+        steps.push({ type: 'reverse', value: !!step.value });
+      }
+    }
+
+    return {
+      format: ROUTE_FORMAT,
+      version: ROUTE_VERSION,
+      units: 'inches, degrees, seconds',
+      start: {
+        x: round2(state.start.x),
+        y: round2(state.start.y),
+        heading: round2(state.start.heading / DEG)
+      },
+      // The limits and the dimensions ride along, because the same waypoints under different
+      // limits are a different auto, and loading a route that drew a profile you never saw
+      // would be worse than not saving them at all.
+      limits: {
+        maxVelocity: num('maxVel', 40),
+        maxWheelVelocity: num('maxWheel', 50),
+        maxAcceleration: num('maxAcc', 50),
+        maxDeceleration: num('maxDec', 45),
+        maxCentripetalAcceleration: num('maxCent', 40)
+      },
+      robot: {
+        length: num('robotLength', 17),
+        width: num('robotWidth', 16),
+        trackWidth: num('trackWidth', 14)
+      },
+      steps: steps
+    };
+  }
+
+  function round2(value) {
+    return Math.round(value * 100) / 100;
+  }
+
+  function saveRoute() {
+    var text = JSON.stringify(routeDocument(), null, 2) + '\n';
+    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'tread-route.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // Revoked on a timer rather than immediately: some browsers have not finished reading the
+    // blob when click() returns.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+    routeState(state.steps.length + ' step' + (state.steps.length === 1 ? '' : 's') + ' saved');
+  }
+
+  /** @return the step, or null if the file held something this page cannot use */
+  function readStep(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.type === 'waypoint') {
+      if (!finite(raw.x) || !finite(raw.y) || !finite(raw.heading)) return null;
+      return {
+        type: 'waypoint',
+        x: raw.x,
+        y: raw.y,
+        heading: raw.heading * DEG,
+        tangentScale: finite(raw.tangentScale) && raw.tangentScale > 0
+          ? raw.tangentScale : TM.DEFAULT_TANGENT_SCALE,
+        maxSpeed: finite(raw.maxSpeed) && raw.maxSpeed > 0 ? raw.maxSpeed : 0
+      };
+    }
+    if (raw.type === 'turn') {
+      return finite(raw.heading) ? { type: 'turn', heading: raw.heading * DEG } : null;
+    }
+    if (raw.type === 'hold' || raw.type === 'wait') {
+      return finite(raw.seconds) ? { type: raw.type, seconds: Math.max(raw.seconds, 0) } : null;
+    }
+    if (raw.type === 'reverse') {
+      return { type: 'reverse', value: !!raw.value };
+    }
+    return null;
+  }
+
+  function finite(value) {
+    return typeof value === 'number' && isFinite(value);
+  }
+
+  function applyRoute(document_) {
+    if (!document_ || document_.format !== ROUTE_FORMAT || !(document_.steps instanceof Array)) {
+      routeState('not a Tread route file');
+      return;
+    }
+
+    var steps = [];
+    var skipped = 0;
+    for (var i = 0; i < document_.steps.length; i++) {
+      var step = readStep(document_.steps[i]);
+      if (step) {
+        steps.push(step);
+      } else {
+        skipped++;
+      }
+    }
+
+    var start = document_.start;
+    if (start && finite(start.x) && finite(start.y) && finite(start.heading)) {
+      setNumber('startX', start.x);
+      setNumber('startY', start.y);
+      setNumber('startH', start.heading);
+    }
+    applySaved(document_.limits, {
+      maxVelocity: 'maxVel', maxWheelVelocity: 'maxWheel', maxAcceleration: 'maxAcc',
+      maxDeceleration: 'maxDec', maxCentripetalAcceleration: 'maxCent'
+    });
+    applySaved(document_.robot, {
+      length: 'robotLength', width: 'robotWidth', trackWidth: 'trackWidth'
+    });
+
+    state.steps = steps;
+    state.selected = steps.length ? 0 : -1;
+    state.scrub = 0;
+    refresh();
+    routeState(steps.length + ' step' + (steps.length === 1 ? '' : 's') + ' loaded'
+      + (skipped ? ', ' + skipped + ' unreadable' : ''));
+  }
+
+  function applySaved(source, fields) {
+    if (!source) return;
+    for (var key in fields) {
+      if (fields.hasOwnProperty(key) && finite(source[key])) {
+        setNumber(fields[key], source[key]);
+      }
+    }
+  }
+
+  function readRouteFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch (error) {
+        routeState('that file is not JSON');
+        return;
+      }
+      applyRoute(parsed);
+    };
+    reader.onerror = function () { routeState('could not read that file'); };
+    reader.readAsText(file);
+  }
+
+  function routeState(message) {
+    var label = document.getElementById('routeState');
+    label.textContent = message;
+    setTimeout(function () {
+      if (label.textContent === message) label.textContent = '';
+    }, 4000);
+  }
+
   // ---------------------------------------------------------------- export
 
   function renderExport() {
@@ -2331,6 +2530,16 @@
     refresh();
   });
   document.getElementById('loadExample').addEventListener('click', loadExample);
+
+  document.getElementById('saveRoute').addEventListener('click', saveRoute);
+  document.getElementById('loadRoute').addEventListener('click', function () {
+    document.getElementById('routeInput').click();
+  });
+  document.getElementById('routeInput').addEventListener('change', function (event) {
+    if (event.target.files && event.target.files[0]) readRouteFile(event.target.files[0]);
+    // Cleared so choosing the same file twice in a row still fires a change.
+    event.target.value = '';
+  });
 
   document.getElementById('copyJava').addEventListener('click', function () {
     var area = document.getElementById('export');

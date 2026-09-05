@@ -382,6 +382,11 @@ itself.
 
 **As a path editor:** click the field to add waypoints, drag to move, drag the nose to aim,
 drag the robot itself to set the start. Every route row carries move up, move down and delete.
+**Save** writes the route to a small JSON file and **load** reads one back, so a route survives
+a closed tab and travels between the laptop that planned it and the one at the competition —
+keep it next to the OpMode it belongs to. Inches, degrees and seconds, whichever unit the page
+is showing, and the limits and robot dimensions ride along, because the same waypoints under
+different limits are a different auto.
 Live curvature and velocity profile underneath, so you can see *why* a pretty curve crawls — at
 0.1 /in curvature with a 14 in track, the wheel-speed limit alone cuts commanded speed by 41%.
 Exports a paste-ready `RouteBuilder` chain.
