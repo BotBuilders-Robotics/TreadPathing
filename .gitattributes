@@ -1,0 +1,5 @@
+# normalise line endings
+* text=auto eol=lf
+
+# enforce text
+*.java text
