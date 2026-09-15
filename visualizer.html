@@ -1161,14 +1161,21 @@
     }
     var transport = stage.querySelector('.transport');
     var legend = stage.querySelector('.legend');
-    var available = stage.clientHeight - transport.offsetHeight - legend.offsetHeight - STAGE_GAPS;
-    var size = available / (1 + PROFILE_ASPECT);
-    size = Math.min(Math.max(size, MIN_FIELD), stage.clientWidth);
-    var next = Math.floor(size) + 'px';
-    if (next !== lastFit) {
-      lastFit = next;
+    // Writing --fit can toggle .stage's own scrollbar, which changes stage.clientWidth --
+    // one of the inputs this very calculation just used. Re-measure after each write until
+    // the size stops moving (or we give up after a few tries) so the frame that gets drawn
+    // is the converged size, not an intermediate one on its way there.
+    var next = lastFit;
+    for (var i = 0; i < 4; i++) {
+      var available = stage.clientHeight - transport.offsetHeight - legend.offsetHeight - STAGE_GAPS;
+      var size = available / (1 + PROFILE_ASPECT);
+      size = Math.min(Math.max(size, MIN_FIELD), stage.clientWidth);
+      var candidate = Math.floor(size) + 'px';
+      if (candidate === next) break;
+      next = candidate;
       root.style.setProperty('--fit', next);
     }
+    lastFit = next;
   }
 
   function toScreen(x, y) {
@@ -2640,7 +2647,10 @@
     renderReadout();
   });
 
-  window.addEventListener('resize', function () { draw(); });
+  window.addEventListener('resize', function () {
+    fitStage();
+    draw();
+  });
 
   // ---------------------------------------------------------------- loop
 
@@ -2659,11 +2669,11 @@
     renderExport();
     renderReadout();
     showTime();
+    fitStage();
     draw();
   }
 
   function draw() {
-    fitStage();
     drawField();
     drawRoute();
     var at = poseAtTime(state.scrub);
