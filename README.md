@@ -236,7 +236,7 @@ with a Pinpoint gets those blocks under **Additional Hardware** without doing an
 
 **Markers and actions are deliberately missing.** They take a callback and Blocks has no way to
 hand one across. If something has to happen part-way along a route, split it: run the first
-half, do the thing, run the second. Clumsier than a marker, and honest about what is possible.
+half, do the thing, run the second.
 
 One trap worth knowing if you extend this. The Blocks entry points are `static`, because a
 `BlocksOpModeCompanion` gives you nowhere else to put state, and the Robot Controller keeps the
@@ -291,7 +291,7 @@ Three options behind one interface, plus one optional extra. Switch with one lin
 ### The optional one
 
 `optional/org/treadpathing/localization/BbrExpanderLocalizer.java` drives the
-[BotBuilders Digital Expander](https://expander.buildingblockrobotics.com), which fuses its own
+[BBR Digital Expander](https://expander.buildingblockrobotics.com), which fuses its own
 gyro with two dead wheels and returns a field pose in millimetres. It is an adapter, not a
 driver: the board's own `BBRDigitalExpander.java` and `BBRRegMap.java` do the talking.
 
