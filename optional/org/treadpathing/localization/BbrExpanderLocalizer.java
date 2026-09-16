@@ -8,7 +8,7 @@ import org.treadpathing.geometry.MathUtil;
 import org.treadpathing.geometry.Pose;
 
 /**
- * Localizer for the BotBuilders Robotics Digital Expander.
+ * Localizer for the BBR Digital Expander.
  *
  * <p>The board fuses its own gyro with two dead wheels and hands back a finished field pose in
  * millimetres, so this is a thin adapter rather than a driver: it converts units, adopts the
@@ -16,7 +16,7 @@ import org.treadpathing.geometry.Pose;
  *
  * <h3>This file is not part of the default drop</h3>
  *
- * It lives in {@code optional/} because it depends on BotBuilders' own driver, which is two
+ * It lives in {@code optional/} because it depends on BBR's own driver, which is two
  * more source files you have to paste. Everything in {@code src/} compiles against the FTC SDK
  * and nothing else, and putting this beside it would mean every team had to paste a driver for
  * a board most of them do not own, or watch Build Everything fail. Copy this file only if you
@@ -25,7 +25,7 @@ import org.treadpathing.geometry.Pose;
  * <h3>Installing it</h3>
  *
  * <ol>
- *   <li>Paste BotBuilders' {@code com/buildingblockrobotics/expander/} folder
+ *   <li>Paste BBR's {@code com/buildingblockrobotics/expander/} folder
  *       ({@code BBRDigitalExpander.java} and {@code BBRRegMap.java}) into the OnBotJava tree,
  *       as a sibling of {@code org/}. See expander.buildingblockrobotics.com.
  *   <li>Paste this file into {@code org/treadpathing/localization/}.
