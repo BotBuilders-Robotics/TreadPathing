@@ -381,7 +381,9 @@ window it does not scroll: the field is sized to the viewport and the side panel
 itself.
 
 **As a path editor:** click the field to add waypoints, drag to move, drag the nose to aim,
-drag the robot itself to set the start. Every route row carries move up, move down and delete.
+drag the robot itself to set the start. Every route row carries move up, move down and delete,
+and **undo** and **redo** (ctrl+z, ctrl+shift+z) cover every edit to the route, the limits and
+the robot &mdash; a drag or a typed number is one step, not one per frame.
 **Save** writes the route to a small JSON file and **load** reads one back, so a route survives
 a closed tab and travels between the laptop that planned it and the one at the competition —
 keep it next to the OpMode it belongs to. Inches, degrees and seconds, whichever unit the page
