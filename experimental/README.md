@@ -131,6 +131,113 @@ experiment grew `turnTo`, profiled, and the first version of it ended 21 degrees
 the leg finished when the *reference* did. `TurnSegment` settles on tolerance for exactly that
 reason; so does this now.
 
+## The constants a team would actually write
+
+`MecanumDriveConstants` is the mecanum answer to `DriveConstants`, and it is a separate class
+for a reason that shows up in the first line of either file: **a differential drive is two
+sides, a mecanum is four corners.** Grouping the corners loses the distinction the drivetrain
+is built on, since front-left and back-left turn opposite ways to strafe.
+
+```java
+MecanumDriveConstants drive = new MecanumDriveConstants()
+        .motors("leftFront", "rightFront", "leftBack", "rightBack")
+        .reversed(true, false, true, false)
+        .trackWidth(14.0)          // tape measure, left wheel centre to right
+        .wheelBase(12.0)           // tape measure, front wheel centre to back
+        .lateralMultiplier(1.15)   // from a strafe test, never 1.0 in practice
+        .feedforward(0.08, 0.0207, 0.0024)
+        .maxWheelVelocity(36.0);
+```
+
+The geometry differs twice over. A tank drive is described by one distance and it is not even
+a real one -- the effective track width from SpinTest runs two to four inches wider than the
+wheels physically are, because skid steer scrubs in the turn. A mecanum takes two lengths a
+tape can measure and derives the turn radius from them, then accounts for the scrubbing it
+*does* do -- sideways, through the rollers -- in the lateral multiplier.
+
+Everything electrical is identical: kS, kV, kA, the deadband, voltage compensation, the write
+cache, and both velocity modes. Those are properties of motors and batteries rather than of
+wheels. They are duplicated here rather than shared only because this is an experiment beside
+the library instead of inside it, and the size of that duplicated part is itself one of the
+measurements this experiment exists to take: roughly half the class.
+
+One failure mode the constants cannot catch is wrong motor *order*. A mecanum with two corners
+swapped drives straight perfectly well and strafes the wrong way, which no amount of validation
+sees. `validate()` catches the rest in init -- an empty name, a lateral multiplier below 1.0,
+a zero length, `HUB_PIDF` without ticks per inch -- and the setter's documentation says to
+drive each wheel on its own before trusting the file.
+
+## What a team would write
+
+Two files, beside the tank quickstart they mirror:
+
+- `org/firstinspires/ftc/teamcode/tread/mecanum/MecanumConstants.java` — the only file a team
+  edits. Read it next to `quickstart/.../Constants.java` and the experiment is one screen:
+  four corners instead of two sides, two tape-measure lengths instead of one effective track
+  width, translation and heading gains instead of Ramsete, a turn-rate limit that has no tank
+  counterpart, and no `buildFollower`.
+- `.../mecanum/ExampleMecanumAuto.java` — a complete autonomous. The route reads the way the
+  tank one does and says things a tank route cannot: strafe to the scoring position with the
+  nose fixed on the goal, then curve away while the nose comes round.
+
+**The loop underneath does not read that way, and that is the argument.** On the tank side the
+whole of `runOpMode` is `follower.update()` inside `while (follower.isBusy())`, because
+`Follower` owns the localizer, the clock, the segment cursor and the drivetrain. With no
+holonomic follower, the example writes all of it out by hand — reading the localizer, timing
+the loop, walking the legs, sampling the trajectory, deciding when a leg is done. It is left
+inline rather than tidied into a helper, because that helper *is* the missing follower.
+
+The example's route is not just compiled, it is flown: the suite rebuilds it from the example's
+own constants and runs it in the simulator, arriving 0.0 in from the planned end, 1.4° off
+heading, never more than 0.7 in off the path, and never asking that robot's 36 in/s wheels for
+more than 36 in/s. An example that compiles is not an example that drives.
+
+## The tuning ladder
+
+None of the tank tuning OpModes run on a mecanum: every one starts with
+`Constants.buildFollower`, which builds a `TankDrive` out of two named sides. Below that, the
+rungs divide three ways.
+
+| rung | on a mecanum |
+|---|---|
+| 0 LocalizationTest | transfers — it is about the localizer, which does not care about wheels |
+| 1 PushTest, ticks per inch | transfers, averaging four wheels rather than two sides |
+| **2 SpinTest, track width** | **does not exist.** There is no effective track width to find: you measure track and wheelbase with a tape. The unknown it is replaced by is the lateral multiplier |
+| 3 RampTest, kS and kV | **ported**, as `MecanumRampTest` |
+| 4–5 StraightTest, kA and limits | **ported**, as `MecanumStraightTest` |
+| 6 CircleTest, centripetal | transfers — drive it nose-tangent and it is the same test |
+| 7 SquareTest, follower gains | the shape and the datalog transfer, but it tunes Ramsete gains that do not exist here; it would tune translation and heading gains |
+| 8 TurnTest | transfers to `turnTo` |
+| 9 PoseTest, hold gains | transfers to `HolonomicPoseHold` |
+
+`StrafeTest` is the rung with no tank counterpart. Drive forward for a fixed time at a fixed
+power and measure how far the robot went; strafe for the same time at the same power and
+measure that. The same wheel speed buys less travel sideways, and the ratio is the multiplier.
+Both distances come from the **localizer**, never the drive encoders: strafing turns the wheels
+in opposing pairs, so their mean is near zero however far the robot has moved — the encoders
+cannot see the thing being measured.
+
+Making any of this possible needed a tuning surface on `MecanumDrive`, which had none. The low
+rungs do not use the follower at all: they drive the motors raw and read them back. It now has
+per-wheel positions and velocities, raw powers, a named `setStrafePowers` (four signs at a call
+site is how you get a strafe test that quietly measures a diagonal), battery voltage, and a
+mean forward reading that is documented as meaningless during a strafe for the reason above.
+
+`MecanumRampTest` and `MecanumStraightTest` write the same log columns as their tank
+counterparts, so the visualizer fits kS, kV and kA from them with no changes at all.
+
+The straight test carries a caveat the tank one cannot have: its numbers describe the robot
+going **forwards**, which is the cheapest direction a mecanum has. Strafing costs the lateral
+multiplier times as much wheel speed for the same travel, and turning costs more again, so a
+route that strafes will never reach the peak it measures. That is not a hole in the
+measurement — `HolonomicConstraints` works in wheel speed and derates translation by the angle
+between travel and the nose, so measuring forwards and planning in wheel terms agree. It does
+mean the run has to be nose-first: a full-power strafe measures the rollers, not the drivetrain.
+
+That leaves rungs 0, 1, 6, 7, 8 and 9 unported. Each transfers in substance and needs the same
+mechanical rework — a mecanum harness in place of `buildFollower` — except SquareTest and
+PoseTest, which also tune different gains because there is no Ramsete here.
+
 ## What is missing before this is a real answer
 
 - **Odometry.** `DriveEncoderLocalizer` is differential by construction, and mecanum wheel
@@ -138,8 +245,8 @@ reason; so does this now.
   wheels or a Pinpoint, which narrows the audience.
 - **Real hardware.** Everything above is a simulator. `lateralMultiplier` in particular is a
   number you can only get from a real strafe test on a real floor.
-- **A holonomic follower object.** There is no `Follower` here: the sim drives the legs
-  directly. Writing one means either a second follower or a generalised one, which is the
+- **A holonomic follower object.** There is no `Follower` here: the sim and the example
+  OpMode drive the legs directly. Writing one means either a second follower or a generalised one, which is the
   `ChassisSpeeds` problem again wearing a different hat.
 - **Pedro Pathing already exists**, is good at mecanum, and the README recommends it by name.
   The reason this library exists is that nobody served tank drives in OnBotJava. Nobody is
