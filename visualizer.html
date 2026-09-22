@@ -1,0 +1,3496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tread Path Planner</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNzAgMTcwIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1LDUpIj48cmVjdCB4PSIxNSIgeT0iNTUiIHdpZHRoPSIxMzAiIGhlaWdodD0iNTAiIHJ4PSIyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTQyNDNhIiBzdHJva2Utd2lkdGg9IjEwIi8+PGcgc3Ryb2tlPSIjMTQyNDNhIiBzdHJva2Utd2lkdGg9IjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGxpbmUgeDE9IjQ2IiB5MT0iNDgiIHgyPSI0NiIgeTI9IjU4Ii8+PGxpbmUgeDE9IjYzIiB5MT0iNDgiIHgyPSI2MyIgeTI9IjU4Ii8+PGxpbmUgeDE9IjgwIiB5MT0iNDgiIHgyPSI4MCIgeTI9IjU4Ii8+PGxpbmUgeDE9Ijk3IiB5MT0iNDgiIHgyPSI5NyIgeTI9IjU4Ii8+PGxpbmUgeDE9IjExNCIgeTE9IjQ4IiB4Mj0iMTE0IiB5Mj0iNTgiLz48bGluZSB4MT0iNDYiIHkxPSIxMDIiIHgyPSI0NiIgeTI9IjExMiIvPjxsaW5lIHgxPSI2MyIgeTE9IjEwMiIgeDI9IjYzIiB5Mj0iMTEyIi8+PGxpbmUgeDE9IjgwIiB5MT0iMTAyIiB4Mj0iODAiIHkyPSIxMTIiLz48bGluZSB4MT0iOTciIHkxPSIxMDIiIHgyPSI5NyIgeTI9IjExMiIvPjxsaW5lIHgxPSIxMTQiIHkxPSIxMDIiIHgyPSIxMTQiIHkyPSIxMTIiLz48L2c+PHBhdGggZD0iTTI1LDE0MCBDNzAsMTUwIDYwLDQwIDE1MCwyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMGZiOGEzIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjI1IiBjeT0iMTQwIiByPSI5IiBmaWxsPSIjMGZiOGEzIi8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iMjUiIHI9IjExIiBmaWxsPSJub25lIiBzdHJva2U9IiMwZmI4YTMiIHN0cm9rZS13aWR0aD0iNSIvPjxjaXJjbGUgY3g9IjE1MCIgY3k9IjI1IiByPSI0IiBmaWxsPSIjMGZiOGEzIi8+PC9nPjwvc3ZnPg==">
+<style>
+  :root {
+    --ground:   #F1F3F0;
+    --surface:  #FFFFFF;
+    --sunk:     #E7EAE5;
+    --ink:      #161C1A;
+    --muted:    #5B6664;
+    --faint:    #8B9793;
+    --line:     #D6DAD5;
+    --line-soft:#E4E8E2;
+    --primary:  #12695A;
+    --primary-w:#DDEBE6;
+    --signal:   #8E620D;
+    --signal-w: #F2E9D5;
+    --danger:   #9E3B2B;
+    --danger-w: #F3E2DE;
+    --tile:     #E9ECE7;
+    --tile-line:#CFD5CD;
+    --actual:   #7A4FB5;
+
+    --f-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --f-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0E1413;
+      --surface:  #161E1C;
+      --sunk:     #121A18;
+      --ink:      #E3EAE6;
+      --muted:    #97A7A2;
+      --faint:    #6D7C78;
+      --line:     #263230;
+      --line-soft:#1E2826;
+      --primary:  #4EBFA3;
+      --primary-w:#14302A;
+      --signal:   #D9A548;
+      --signal-w: #302713;
+      --danger:   #E08170;
+      --danger-w: #331C18;
+      --tile:     #18211F;
+      --tile-line:#26312E;
+      --actual:   #B08BE8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0E1413; --surface: #161E1C; --sunk: #121A18;
+    --ink: #E3EAE6; --muted: #97A7A2; --faint: #6D7C78;
+    --line: #263230; --line-soft: #1E2826;
+    --primary: #4EBFA3; --primary-w: #14302A;
+    --signal: #D9A548; --signal-w: #302713;
+    --danger: #E08170; --danger-w: #331C18;
+    --tile: #18211F; --tile-line: #26312E; --actual: #B08BE8;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  header {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    padding: 14px 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    margin: 0;
+  }
+  header .hint {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  header .spacer { flex: 1; }
+  /* Sent to someone who has never seen the library, this page should still say where it
+     came from. Styled as a link rather than a button: it leaves, it does not do anything. */
+  header .repo {
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+  }
+  header .repo:hover { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 18px;
+    padding: 18px 20px 40px;
+    align-items: start;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1080px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /*
+   * On anything desktop-shaped the page does not scroll at all. The field is the thing you
+   * are working on, and hunting for it after a scroll is the difference between a tool and a
+   * document: it stays put, sized to the viewport, and the side panel scrolls inside itself.
+   * --fit is set from JavaScript to the largest square that leaves room for the profile.
+   */
+  @media (min-width: 1081px) {
+    html, body { height: 100%; }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+    .app {
+      flex: 1;
+      min-height: 0;
+      padding-bottom: 18px;
+      align-items: stretch;
+    }
+    .stage {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .side {
+      min-height: 0;
+      overflow-y: auto;
+      /* Room for the scrollbar, so it never sits on top of a panel's border. */
+      padding-right: 4px;
+    }
+    /*
+     * The legend is deliberately NOT clamped to --fit. Its height feeds the fit arithmetic,
+     * so if its width followed the fit it could wrap, shrink the fit, unwrap, and oscillate a
+     * pixel back and forth every animation frame.
+     */
+    .transport, #fieldWrap, #profile { max-width: var(--fit, none); }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 14px 16px;
+  }
+  .panel + .panel { margin-top: 14px; }
+  .panel h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin: 0 0 10px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin: -2px 0 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs button {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    padding: 7px 2px 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    cursor: pointer;
+  }
+  .tabs button:hover { color: var(--ink); background: none; }
+  .tabs button.on {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .tab-pane { display: none; }
+  .tab-pane.on { display: block; }
+
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* Sticks to the top so the scrubber stays reachable while you scroll the
+       field and the profile. The ground-coloured backing keeps the canvas from
+       showing through it. */
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--ground);
+    padding: 12px 0 10px;
+    margin-top: -12px;
+  }
+  .transport input[type=range] { flex: 1; margin: 0; }
+  #play {
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1;
+    flex: none;
+  }
+  .transport .time {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    min-width: 92px;
+    text-align: right;
+  }
+
+  #fieldWrap { position: relative; }
+  canvas { display: block; width: 100%; touch-action: none; }
+  #field { border: 1px solid var(--line); border-radius: 5px; background: var(--surface); cursor: crosshair; }
+  #profile { border: 1px solid var(--line); border-radius: 5px; background: var(--surface); margin-top: 12px; }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 8px; }
+
+  button {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--sunk);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--primary); color: var(--primary); }
+  button.primary { background: var(--primary); border-color: var(--primary); color: var(--surface); }
+  button.primary:hover { opacity: .88; color: var(--surface); }
+  /* Destructive buttons read as destructive before you hover them, not after. */
+  button.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: var(--danger-w);
+  }
+  button.danger:hover { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+  button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  input[type="number"], input[type="text"] {
+    font: inherit;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    width: 100%;
+    padding: 4px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink);
+  }
+  input[type="range"] { width: 100%; accent-color: var(--primary); }
+  label { font-size: 11.5px; color: var(--muted); display: block; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 172px; overflow-y: auto; }
+  ol.steps li {
+    display: grid;
+    grid-template-columns: 22px minmax(0,1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+    background: var(--ground);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  ol.steps li.selected { border-color: var(--primary); background: var(--primary-w); }
+  /*
+   * Per-row reorder and delete. Muted at rest so eight rows of them do not shout, and the
+   * delete only turns red under the pointer -- it is one click from destroying a step, and it
+   * should look like it at the moment that matters.
+   */
+  /* A two-state selector, styled like the tabs rather than like a pair of buttons: it
+     chooses which library you are planning for, which is not an action. */
+  button.seg { border-radius: 0; margin: 0; }
+  button.seg:first-of-type { border-radius: 4px 0 0 4px; }
+  button.seg:last-of-type { border-radius: 0 4px 4px 0; margin-left: -1px; }
+  button.seg.on {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--surface);
+  }
+  button.seg.on:hover { color: var(--surface); opacity: .9; }
+  html[data-drive="tank"] .mecanum-only,
+  html[data-drive="mecanum"] .tank-only { display: none; }
+  /* Wide enough for the glyph and nothing more: these sit beside worded buttons and should
+     not pretend to be as important as them. */
+  button.icon { padding: 5px 8px; line-height: 1; }
+  button.icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  button.icon[disabled] { opacity: .35; cursor: default; }
+  button.icon[disabled]:hover { border-color: var(--line); color: var(--ink); }
+
+  .ops { display: flex; gap: 2px; }
+  .ops button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--faint);
+    display: grid;
+    place-items: center;
+  }
+  .ops button:hover { background: var(--sunk); border-color: var(--line); color: var(--ink); }
+  .ops button.del:hover {
+    background: var(--danger-w);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .ops button[disabled] { opacity: .28; cursor: default; }
+  .ops button[disabled]:hover { background: none; border-color: transparent; color: var(--faint); }
+  .ops svg { display: block; width: 13px; height: 13px; fill: none; stroke: currentColor;
+             stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  ol.steps li .idx { color: var(--faint); }
+  ol.steps li .kind { color: var(--primary); }
+  ol.steps li.rev .kind { color: var(--signal); }
+
+  table.readout { width: 100%; border-collapse: collapse; font-family: var(--f-mono); font-size: 12px; }
+  table.readout td { padding: 3px 0; }
+  table.readout td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  table.readout td.warn { color: var(--signal); }
+  table.readout td.bad { color: var(--danger); }
+
+  textarea {
+    width: 100%;
+    min-height: 190px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.55;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--sunk);
+    color: var(--ink);
+    resize: vertical;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .drop {
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 16px 12px;
+    text-align: center;
+    color: var(--faint);
+    font-size: 12.5px;
+    background: var(--ground);
+  }
+  .drop.over { border-color: var(--primary); color: var(--primary); background: var(--primary-w); }
+
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .legend span::before {
+    content: "";
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: -1px;
+    background: currentColor;
+  }
+</style>
+</head>
+<body>
+
+
+<header>
+  <h1>Tread Path Planner</h1>
+  <span class="hint" id="headerHint">click the field to add a waypoint &middot; drag to move
+    &middot; drag the nose to aim &middot; drag the robot to set the start</span>
+  <span class="spacer"></span>
+  <a class="repo" href="https://github.com/BotBuilders-Robotics/TreadPathing"
+     target="_blank" rel="noopener">GitHub</a>
+  <button id="unitToggle" title="switch between inches and centimetres">in</button>
+  <button id="themeToggle">theme</button>
+</header>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <div class="transport">
+      <button id="play" class="primary" title="play the route">&#9654;</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0">
+      <span class="time" id="timeLabel">0.00 / 0.00 s</span>
+    </div>
+    <div id="fieldWrap">
+      <canvas id="field" width="900" height="900"></canvas>
+    </div>
+    <canvas id="profile" width="900" height="210"></canvas>
+    <div class="legend">
+      <span style="color: var(--primary)">planned path (brighter = faster)</span>
+      <span style="color: var(--signal)">reversed segment</span>
+      <span style="color: var(--actual)">measured, from a datalog</span>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="panel">
+      <h2>Route</h2>
+      <ol class="steps" id="stepList"></ol>
+      <div class="row" style="margin-top:10px">
+        <button id="addTurn">+ turn</button>
+        <button id="addHold">+ stop &amp; hold</button>
+        <button id="addWait">+ wait</button>
+        <button id="toggleReverse" class="tank-only">+ reverse/forward</button>
+      </div>
+      <div class="row">
+        <button id="undo" class="icon" title="undo (ctrl+z)" aria-label="undo" disabled></button>
+        <button id="redo" class="icon" title="redo (ctrl+shift+z)" aria-label="redo" disabled></button>
+        <button id="saveRoute">save</button>
+        <button id="loadRoute">load</button>
+        <input type="file" id="routeInput" accept=".json,application/json" style="display:none">
+        <span class="hint" id="routeState"></span>
+      </div>
+      <div class="row">
+        <button id="clearRoute" class="danger">clear</button>
+        <button id="loadExample">example</button>
+      </div>
+    </div>
+
+    <div class="panel" id="editPanel">
+      <h2>Selected step</h2>
+      <div id="editBody"></div>
+    </div>
+
+    <div class="panel">
+      <div class="tabs" id="tabs">
+        <button data-tab="start" class="on">start</button>
+        <button data-tab="robot">robot</button>
+        <button data-tab="limits">limits</button>
+        <button data-tab="java">java</button>
+        <button data-tab="field">field</button>
+        <button data-tab="log">log</button>
+      </div>
+
+      <div class="tab-pane on" id="tab-start">
+      <div class="grid3">
+        <div><label for="startX">x (in)</label><input type="number" id="startX" data-len step="0.5" value="9"></div>
+        <div><label for="startY">y (in)</label><input type="number" id="startY" data-len step="0.5" value="60"></div>
+        <div><label for="startH">heading (deg)</label><input type="number" id="startH" step="1" value="0"></div>
+      </div>
+      <p class="note">Or drag the robot on the field: the body moves it, the nose aims it.</p>
+      </div>
+
+      <div class="tab-pane" id="tab-limits">
+      <div class="grid2">
+        <div><label for="maxVel">max velocity (in/s)</label><input type="number" id="maxVel" data-len step="1" value="40"></div>
+        <div><label for="maxWheel">max wheel speed (in/s)</label><input type="number" id="maxWheel" data-len step="1" value="50"></div>
+        <div><label for="maxAcc">max accel (in/s&sup2;)</label><input type="number" id="maxAcc" data-len step="1" value="50"></div>
+        <div><label for="maxDec">max decel (in/s&sup2;)</label><input type="number" id="maxDec" data-len step="1" value="45"></div>
+        <div><label for="maxCent">max centripetal (in/s&sup2;)</label><input type="number" id="maxCent" data-len step="1" value="40"></div>
+        <div class="mecanum-only"><label for="maxOmega">max turn rate (deg/s)</label><input type="number" id="maxOmega" step="5" value="170"></div>
+      </div>
+      <p class="note">Track width lives under <b>robot</b>, with the rest of the dimensions.</p>
+      </div>
+
+      <div class="tab-pane" id="tab-robot">
+      <label>drivetrain</label>
+      <div class="row" style="margin-bottom:10px">
+        <button id="driveTank" class="seg on">tank</button>
+        <button id="driveMecanum" class="seg">mecanum</button>
+      </div>
+      <div class="grid2">
+        <div><label for="robotLength">length (in)</label><input type="number" id="robotLength" data-len step="0.5" value="17"></div>
+        <div><label for="robotWidth">width (in)</label><input type="number" id="robotWidth" data-len step="0.5" value="16"></div>
+        <div class="tank-only"><label for="trackWidth">track width (in)</label><input type="number" id="trackWidth" data-len step="0.25" value="14"></div>
+        <div class="mecanum-only"><label for="turnRadius">turn radius (in)</label><input type="number" id="turnRadius" data-len step="0.25" value="13"></div>
+        <div class="mecanum-only"><label for="lateralMult">lateral multiplier</label><input type="number" id="lateralMult" data-raw step="0.05" value="1.15"></div>
+      </div>
+      <p class="note">Length and width are the footprint drawn on the field, nose along the
+      length. Track width is the distance between the left and right wheel centres, which is
+      what turns a path curvature into wheel speeds &mdash; the wheels are drawn where you put
+      it.</p>
+      </div>
+
+      <div class="tab-pane" id="tab-java">
+      <textarea id="export" readonly spellcheck="false"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button id="copyJava" class="primary">copy</button>
+        <span class="hint" id="copyState"></span>
+      </div>
+      <p class="note">Always in inches, whichever unit the page is showing &mdash; the library
+      works in inches and so do the datalogs.</p>
+      </div>
+
+      <div class="tab-pane" id="tab-field">
+      <div class="drop" id="fieldDrop">
+        drop a field image (<code>.png</code>, <code>.jpg</code>)
+        <br><span style="font-size:11.5px">kept in this browser &middot; nothing is uploaded anywhere</span>
+      </div>
+      <input type="file" id="fieldInput" accept="image/*" style="display:none">
+      <label for="fieldOpacity" style="margin-top:10px">opacity <span id="fieldOpacityValue">85%</span></label>
+      <input type="range" id="fieldOpacity" min="0" max="100" value="85">
+      <div class="row" style="margin-top:8px">
+        <button id="pickField">choose image</button>
+        <button id="rotateField">rotate 90&deg;</button>
+        <button id="gridToggle">grid: on</button>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button id="resetField">use BioBuzz field</button>
+        <button id="clearField" class="danger">no image</button>
+      </div>
+      <p class="note" id="fieldNote">Stretched to the full 144 in field with the origin at the
+      bottom-left. Rotate until the tile seams line up with the grid.</p>
+      </div>
+
+      <div class="tab-pane" id="tab-log">
+      <div class="drop" id="drop">
+        drop a <code>.txt</code> from FIRST/java/src/Datalogs
+        <br><span style="font-size:11.5px">square log overlays measured on planned &middot; ramp log fits kS and kV</span>
+      </div>
+      <input type="file" id="fileInput" accept=".txt,.csv" style="display:none">
+      <div class="row" style="margin-top:8px">
+        <button id="pickFile">choose file</button>
+        <button id="clearLog" class="danger">clear overlay</button>
+      </div>
+      <table class="readout" id="logReadout"></table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Playback</h2>
+      <table class="readout" id="readout"></table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/*
+ * Tread Pathing geometry and trajectory maths, in JavaScript.
+ *
+ * This is a deliberate second implementation of the Java in src/org/treadpathing/{spline,
+ * trajectory}. Two implementations of the same maths drift, and a visualizer that lies is
+ * worse than no visualizer, so tools/gen_golden.js samples this one into a CSV and the Java
+ * test suite asserts agreement to 1e-6 on every run. Change one side and the tests tell you.
+ *
+ * Units are inches, radians and seconds throughout. Field origin is a corner, x and y run
+ * 0..144, heading is counter-clockwise from +x.
+ */
+(function (root) {
+  'use strict';
+
+  var TAU = Math.PI * 2;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  function normalizeAngle(a) {
+    var x = a % TAU;
+    if (x > Math.PI) x -= TAU;
+    else if (x <= -Math.PI) x += TAU;
+    return x;
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  /** Mirrors MathUtil.lerpAngle: interpolates along the shortest arc. */
+  function lerpAngle(a, b, t) { return normalizeAngle(a + normalizeAngle(b - a) * t); }
+
+  // ---------------------------------------------------------------- quintic hermite
+
+  function QuinticHermite(p0, v0, a0, p1, v1, a1) {
+    this.c0 = p0;
+    this.c1 = v0;
+    this.c2 = a0 / 2;
+    this.c3 = -10 * p0 - 6 * v0 - 1.5 * a0 + 10 * p1 - 4 * v1 + 0.5 * a1;
+    this.c4 = 15 * p0 + 8 * v0 + 1.5 * a0 - 15 * p1 + 7 * v1 - 1.0 * a1;
+    this.c5 = -6 * p0 - 3 * v0 - 0.5 * a0 + 6 * p1 - 3 * v1 + 0.5 * a1;
+  }
+  QuinticHermite.prototype.value = function (t) {
+    return this.c0 + t * (this.c1 + t * (this.c2 + t * (this.c3 + t * (this.c4 + t * this.c5))));
+  };
+  QuinticHermite.prototype.derivative = function (t) {
+    return this.c1 + t * (2 * this.c2 + t * (3 * this.c3 + t * (4 * this.c4 + t * 5 * this.c5)));
+  };
+  QuinticHermite.prototype.secondDerivative = function (t) {
+    return 2 * this.c2 + t * (6 * this.c3 + t * (12 * this.c4 + t * 20 * this.c5));
+  };
+
+  // ---------------------------------------------------------------- segment
+
+  /** start/end are {x, y, heading}; magnitudes are tangent handle lengths in inches. */
+  function SplineSegment(start, startMag, end, endMag) {
+    this.start = start;
+    this.end = end;
+    this.xs = new QuinticHermite(start.x, Math.cos(start.heading) * startMag, 0,
+                                 end.x, Math.cos(end.heading) * endMag, 0);
+    this.ys = new QuinticHermite(start.y, Math.sin(start.heading) * startMag, 0,
+                                 end.y, Math.sin(end.heading) * endMag, 0);
+  }
+  SplineSegment.prototype.point = function (t) {
+    var c = clamp(t, 0, 1);
+    return { x: this.xs.value(c), y: this.ys.value(c) };
+  };
+  SplineSegment.prototype.tangentAngle = function (t) {
+    var c = clamp(t, 0, 1);
+    var dx = this.xs.derivative(c), dy = this.ys.derivative(c);
+    if (dx * dx + dy * dy < 1e-12) {
+      return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x);
+    }
+    return Math.atan2(dy, dx);
+  };
+  SplineSegment.prototype.curvature = function (t) {
+    var c = clamp(t, 0, 1);
+    var dx = this.xs.derivative(c), dy = this.ys.derivative(c);
+    var ddx = this.xs.secondDerivative(c), ddy = this.ys.secondDerivative(c);
+    var speedSquared = dx * dx + dy * dy;
+    if (speedSquared < 1e-9) return 0;
+    return (dx * ddy - dy * ddx) / (speedSquared * Math.sqrt(speedSquared));
+  };
+
+  // ---------------------------------------------------------------- arc length table
+
+  var ARC_SAMPLES = 400;
+
+  function ArcLengthTable(segment) {
+    this.samples = ARC_SAMPLES;
+    this.arc = new Float64Array(ARC_SAMPLES + 1);
+    var total = 0;
+    var previous = segment.point(0);
+    this.arc[0] = 0;
+    for (var i = 1; i <= ARC_SAMPLES; i++) {
+      var current = segment.point(i / ARC_SAMPLES);
+      var dx = current.x - previous.x, dy = current.y - previous.y;
+      total += Math.sqrt(dx * dx + dy * dy);
+      this.arc[i] = total;
+      previous = current;
+    }
+    this.total = total;
+  }
+  ArcLengthTable.prototype.parameterAt = function (s) {
+    if (this.total < 1e-9) return 0;
+    if (s <= 0) return 0;
+    if (s >= this.total) return 1;
+    var low = 0, high = this.samples;
+    while (high - low > 1) {
+      var mid = (low + high) >> 1;
+      if (this.arc[mid] <= s) low = mid; else high = mid;
+    }
+    var span = this.arc[high] - this.arc[low];
+    var f = span < 1e-9 ? 0 : (s - this.arc[low]) / span;
+    return (low + f) / this.samples;
+  };
+
+  // ---------------------------------------------------------------- path
+
+  var DEFAULT_TANGENT_SCALE = 1.25;
+
+  /** Mirrors SplinePath.NO_SPEED_CAP: a leg asking for no ceiling of its own. */
+  var NO_SPEED_CAP = 0;
+
+  /** waypoints: [{x, y, heading, tangentScale?, maxSpeed?}, ...] in TRAVEL-heading terms. */
+  function SplinePath(waypoints) {
+    this.segments = [];
+    this.tables = [];
+    this.starts = [];
+    this.caps = [];
+    var total = 0;
+    for (var i = 0; i < waypoints.length - 1; i++) {
+      var a = waypoints[i], b = waypoints[i + 1];
+      var chord = Math.hypot(b.x - a.x, b.y - a.y);
+      if (chord < 1e-6) throw new Error('Waypoints ' + i + ' and ' + (i + 1) + ' coincide');
+      var outMag = chord * (a.tangentScale || DEFAULT_TANGENT_SCALE);
+      var inMag = chord * (b.tangentScale || DEFAULT_TANGENT_SCALE);
+      var segment = new SplineSegment(a, outMag, b, inMag);
+      this.segments.push(segment);
+      this.tables.push(new ArcLengthTable(segment));
+      // The cap rides on the waypoint you are driving to, so leg i takes it from b.
+      this.caps.push(Math.max(b.maxSpeed || NO_SPEED_CAP, 0));
+      this.starts.push(total);
+      total += this.tables[i].total;
+    }
+    this.length = total;
+  }
+  SplinePath.prototype._locate = function (s) {
+    var clamped = clamp(s, 0, this.length);
+    for (var i = this.segments.length - 1; i >= 0; i--) {
+      if (clamped >= this.starts[i]) {
+        return { index: i, t: this.tables[i].parameterAt(clamped - this.starts[i]) };
+      }
+    }
+    return { index: 0, t: 0 };
+  };
+  SplinePath.prototype.poseAt = function (s) {
+    var at = this._locate(s);
+    var p = this.segments[at.index].point(at.t);
+    return { x: p.x, y: p.y, heading: this.segments[at.index].tangentAngle(at.t) };
+  };
+  SplinePath.prototype.curvatureAt = function (s) {
+    var at = this._locate(s);
+    return this.segments[at.index].curvature(at.t);
+  };
+  /** Speed ceiling asked for on the leg containing this arc length, 0 for none. */
+  SplinePath.prototype.speedCapAt = function (s) {
+    return this.caps[this._locate(s).index];
+  };
+
+  // ---------------------------------------------------------------- constraints
+
+  function Constraints(options) {
+    options = options || {};
+    this.maxVelocity = options.maxVelocity !== undefined ? options.maxVelocity : 40;
+    this.maxAcceleration = options.maxAcceleration !== undefined ? options.maxAcceleration : 50;
+    this.maxDeceleration = options.maxDeceleration !== undefined ? options.maxDeceleration : 45;
+    this.maxCentripetalAcceleration =
+      options.maxCentripetalAcceleration !== undefined ? options.maxCentripetalAcceleration : 40;
+    this.maxWheelVelocity = options.maxWheelVelocity !== undefined ? options.maxWheelVelocity : 50;
+    this.trackWidth = options.trackWidth !== undefined ? options.trackWidth : 14;
+    this.startVelocity = options.startVelocity || 0;
+    this.endVelocity = options.endVelocity || 0;
+  }
+  Constraints.prototype.velocityLimit = function (curvature) {
+    var k = Math.abs(curvature);
+    var limit = this.maxVelocity;
+    if (this.maxCentripetalAcceleration > 0 && k > 1e-9) {
+      limit = Math.min(limit, Math.sqrt(this.maxCentripetalAcceleration / k));
+    }
+    if (this.maxWheelVelocity > 0) {
+      limit = Math.min(limit, this.maxWheelVelocity / (1 + k * this.trackWidth / 2));
+    }
+    return Math.max(limit, 0);
+  };
+  Constraints.prototype.accelerationLimit = function (curvature) {
+    return this.maxAcceleration / (1 + Math.abs(curvature) * this.trackWidth / 2);
+  };
+  Constraints.prototype.decelerationLimit = function (curvature) {
+    return this.maxDeceleration / (1 + Math.abs(curvature) * this.trackWidth / 2);
+  };
+
+  // ---------------------------------------------------------------- trajectory
+
+  var SAMPLE_SPACING = 0.25;
+  var MAX_SAMPLES = 4000;
+
+  function reachable(v, a, d) {
+    var squared = v * v + 2 * a * d;
+    return squared <= 0 ? 0 : Math.sqrt(squared);
+  }
+
+  /** Mirrors TrajectoryGenerator.generate exactly, including the four passes. */
+  function generateTrajectory(path, constraints, reversed) {
+    var length = path.length;
+    if (length < 1e-4) throw new Error('Path has effectively zero length');
+
+    var intervals = Math.ceil(length / SAMPLE_SPACING);
+    intervals = clamp(intervals, 1, MAX_SAMPLES);
+    var count = intervals + 1;
+
+    var s = new Float64Array(count), k = new Float64Array(count);
+    var tangent = new Float64Array(count), x = new Float64Array(count), y = new Float64Array(count);
+    var v = new Float64Array(count);
+    var ceiling = new Float64Array(count);
+
+    for (var i = 0; i < count; i++) {
+      var arc = length * i / intervals;
+      s[i] = arc;
+      var pose = path.poseAt(arc);
+      x[i] = pose.x; y[i] = pose.y; tangent[i] = pose.heading;
+      k[i] = path.curvatureAt(arc);
+      var limit = constraints.velocityLimit(k[i]);
+      var cap = path.speedCapAt(arc);
+      ceiling[i] = cap > 0 ? Math.min(limit, cap) : limit;
+    }
+
+    v[0] = Math.min(constraints.startVelocity, ceiling[0]);
+    for (i = 1; i < count; i++) {
+      var ds = s[i] - s[i - 1];
+      v[i] = Math.min(ceiling[i],
+                      reachable(v[i - 1], constraints.accelerationLimit(k[i - 1]), ds));
+    }
+
+    v[count - 1] = Math.min(v[count - 1], constraints.endVelocity);
+    for (i = count - 2; i >= 0; i--) {
+      var dsBack = s[i + 1] - s[i];
+      v[i] = Math.min(v[i], reachable(v[i + 1], constraints.decelerationLimit(k[i]), dsBack));
+    }
+
+    var times = new Float64Array(count), accels = new Float64Array(count);
+    for (i = 1; i < count; i++) {
+      var step = s[i] - s[i - 1];
+      var a = (v[i] * v[i] - v[i - 1] * v[i - 1]) / (2 * step);
+      var dt;
+      if (Math.abs(a) > 1e-6) dt = (v[i] - v[i - 1]) / a;
+      else if (v[i - 1] > 1e-6) dt = step / v[i - 1];
+      else if (v[i] > 1e-6) dt = step / v[i];
+      else throw new Error('Trajectory stalled at sample ' + i);
+      times[i] = times[i - 1] + dt;
+      accels[i] = a;
+    }
+    accels[0] = count > 1 ? accels[1] : 0;
+
+    var sign = reversed ? -1 : 1;
+    var offset = reversed ? Math.PI : 0;
+    var samples = new Array(count);
+    for (i = 0; i < count; i++) {
+      samples[i] = {
+        time: times[i],
+        arcLength: s[i],
+        x: x[i],
+        y: y[i],
+        heading: normalizeAngle(tangent[i] + offset),
+        velocity: sign * v[i],
+        acceleration: sign * accels[i],
+        curvature: sign * k[i]
+      };
+    }
+    return {
+      samples: samples,
+      duration: times[count - 1],
+      length: length,
+      reversed: !!reversed
+    };
+  }
+
+  // ---------------------------------------------------------------- holonomic
+  //
+  // Mirrors experimental/org/treadpathing/holonomic exactly, the same way the code above
+  // mirrors src/. On a mecanum the nose is a free parameter, so a heading plan says what it
+  // does, and three demands share one wheel budget: forward travel at 1x, sideways travel at
+  // the lateral multiplier because the rollers scrub, and rotation at omega * turnRadius
+  // whether or not the robot is moving.
+
+  function MecanumKinematics(options) {
+    options = options || {};
+    this.turnRadius = options.turnRadius !== undefined ? options.turnRadius : 13;
+    this.lateralMultiplier =
+      options.lateralMultiplier !== undefined ? options.lateralMultiplier : 1.15;
+  }
+
+  function HolonomicConstraints(options) {
+    options = options || {};
+    this.maxVelocity = options.maxVelocity !== undefined ? options.maxVelocity : 50;
+    this.maxAcceleration = options.maxAcceleration !== undefined ? options.maxAcceleration : 50;
+    this.maxDeceleration = options.maxDeceleration !== undefined ? options.maxDeceleration : 45;
+    this.maxCentripetalAcceleration =
+      options.maxCentripetalAcceleration !== undefined ? options.maxCentripetalAcceleration : 40;
+    this.maxWheelVelocity = options.maxWheelVelocity !== undefined ? options.maxWheelVelocity : 60;
+    this.maxAngularVelocity =
+      options.maxAngularVelocity !== undefined ? options.maxAngularVelocity : 3;
+    this.startVelocity = options.startVelocity || 0;
+    this.endVelocity = options.endVelocity || 0;
+  }
+
+  /** Wheel speed the worst wheel needs per inch per second of travel along the path. */
+  HolonomicConstraints.prototype.wheelCostPerInch = function (travelAngle, headingRate, kin) {
+    return Math.abs(Math.cos(travelAngle))
+      + Math.abs(Math.sin(travelAngle)) * kin.lateralMultiplier
+      + Math.abs(headingRate) * kin.turnRadius;
+  };
+
+  HolonomicConstraints.prototype.velocityLimit = function (curvature, travelAngle, headingRate, kin) {
+    var limit = this.maxVelocity;
+    var k = Math.abs(curvature);
+
+    if (this.maxCentripetalAcceleration > 0 && k > 1e-9) {
+      limit = Math.min(limit, Math.sqrt(this.maxCentripetalAcceleration / k));
+    }
+    if (this.maxWheelVelocity > 0) {
+      var cost = this.wheelCostPerInch(travelAngle, headingRate, kin);
+      if (cost > 1e-9) limit = Math.min(limit, this.maxWheelVelocity / cost);
+    }
+    var rate = Math.abs(headingRate);
+    if (this.maxAngularVelocity > 0 && rate > 1e-9) {
+      limit = Math.min(limit, this.maxAngularVelocity / rate);
+    }
+    return Math.max(limit, 0);
+  };
+
+  HolonomicConstraints.prototype.accelerationLimit = function (travelAngle, headingRate, kin) {
+    return this.maxAcceleration / Math.max(this.wheelCostPerInch(travelAngle, headingRate, kin), 1);
+  };
+
+  HolonomicConstraints.prototype.decelerationLimit = function (travelAngle, headingRate, kin) {
+    return this.maxDeceleration / Math.max(this.wheelCostPerInch(travelAngle, headingRate, kin), 1);
+  };
+
+  var HeadingPlans = {
+    /** Nose fixed at one angle: the strafe, and what a scorer wants. */
+    hold: function (heading) {
+      return {
+        kind: 'hold',
+        headingAt: function () { return heading; },
+        rateAt: function () { return 0; },
+        describe: function () { return 'hold ' + Math.round(heading * 180 / Math.PI) + ' deg'; }
+      };
+    },
+    /** Nose along the direction of travel, which is all a tank drive can do. */
+    tangent: function (offset) {
+      var turn = offset || 0;
+      return {
+        kind: 'tangent',
+        headingAt: function (path, s) { return normalizeAngle(path.poseAt(s).heading + turn); },
+        // The tangent turns at exactly the path's curvature, by definition.
+        rateAt: function (path, s) { return path.curvatureAt(s); },
+        describe: function () { return turn ? 'tangent + offset' : 'tangent'; }
+      };
+    },
+    /**
+     * A nose angle at every waypoint, interpolated in between: the plan the path editor
+     * writes, and the one that matches how a team describes an auto out loud.
+     */
+    byWaypoints: function (headings) {
+        if (!headings || headings.length < 2) throw new Error('One heading per waypoint');
+
+        function locate(path, s) {
+          var last = Math.min(headings.length - 2, path.segments.length - 1);
+          for (var i = last; i >= 0; i--) {
+            if (s >= path.starts[i] || i === 0) {
+              var start = path.starts[i];
+              var end = i < last ? path.starts[i + 1] : path.length;
+              var span = end - start;
+              return { leg: i, t: span > 1e-9 ? clamp((s - start) / span, 0, 1) : 0, span: span };
+            }
+          }
+          return { leg: 0, t: 0, span: path.length };
+        }
+
+        return {
+          kind: 'waypoints',
+          headingAt: function (path, s) {
+            var at = locate(path, s);
+            return lerpAngle(headings[at.leg], headings[at.leg + 1], at.t);
+          },
+          rateAt: function (path, s) {
+            var at = locate(path, s);
+            return at.span > 1e-9
+              ? normalizeAngle(headings[at.leg + 1] - headings[at.leg]) / at.span : 0;
+          },
+          describe: function () { return 'nose per waypoint'; }
+        };
+    },
+    /** Turns steadily across the path, so the turn is spread over the whole drive. */
+    interpolate: function (from, to) {
+      var delta = normalizeAngle(to - from);
+      return {
+        kind: 'interpolate',
+        headingAt: function (path, s) {
+          var fraction = path.length > 1e-9 ? clamp(s / path.length, 0, 1) : 0;
+          return normalizeAngle(from + delta * fraction);
+        },
+        rateAt: function (path) { return path.length > 1e-9 ? delta / path.length : 0; },
+        describe: function () {
+          return 'turn ' + Math.round(delta * 180 / Math.PI) + ' deg across the path';
+        }
+      };
+    }
+  };
+
+  /** Mirrors HolonomicTrajectoryGenerator.generate, including the four passes. */
+  function generateHolonomicTrajectory(path, plan, constraints, kinematics) {
+    var length = path.length;
+    if (length < 1e-4) throw new Error('Path has effectively zero length');
+
+    var intervals = clamp(Math.ceil(length / SAMPLE_SPACING), 1, MAX_SAMPLES);
+    var count = intervals + 1;
+
+    var s = new Float64Array(count), k = new Float64Array(count);
+    var tangent = new Float64Array(count), x = new Float64Array(count), y = new Float64Array(count);
+    var heading = new Float64Array(count), rate = new Float64Array(count);
+    var travel = new Float64Array(count), ceiling = new Float64Array(count);
+    var v = new Float64Array(count);
+
+    for (var i = 0; i < count; i++) {
+      var arc = length * i / intervals;
+      s[i] = arc;
+      var pose = path.poseAt(arc);
+      x[i] = pose.x; y[i] = pose.y; tangent[i] = pose.heading;
+      k[i] = path.curvatureAt(arc);
+      heading[i] = plan.headingAt(path, arc);
+      rate[i] = plan.rateAt(path, arc);
+      travel[i] = normalizeAngle(tangent[i] - heading[i]);
+      ceiling[i] = constraints.velocityLimit(k[i], travel[i], rate[i], kinematics);
+    }
+
+    v[0] = Math.min(constraints.startVelocity, ceiling[0]);
+    for (i = 1; i < count; i++) {
+      var ds = s[i] - s[i - 1];
+      v[i] = Math.min(ceiling[i], reachable(v[i - 1],
+        constraints.accelerationLimit(travel[i - 1], rate[i - 1], kinematics), ds));
+    }
+
+    v[count - 1] = Math.min(v[count - 1], constraints.endVelocity);
+    for (i = count - 2; i >= 0; i--) {
+      var dsBack = s[i + 1] - s[i];
+      v[i] = Math.min(v[i], reachable(v[i + 1],
+        constraints.decelerationLimit(travel[i], rate[i], kinematics), dsBack));
+    }
+
+    var times = new Float64Array(count), accels = new Float64Array(count);
+    for (i = 1; i < count; i++) {
+      var step = s[i] - s[i - 1];
+      var a = (v[i] * v[i] - v[i - 1] * v[i - 1]) / (2 * step);
+      var dt;
+      if (Math.abs(a) > 1e-6) dt = (v[i] - v[i - 1]) / a;
+      else if (v[i - 1] > 1e-6) dt = step / v[i - 1];
+      else if (v[i] > 1e-6) dt = step / v[i];
+      else throw new Error('Trajectory stalled at sample ' + i
+        + '; the heading plan may want more turn than the wheels have');
+      times[i] = times[i - 1] + dt;
+      accels[i] = a;
+    }
+    accels[0] = count > 1 ? accels[1] : 0;
+
+    var samples = new Array(count);
+    for (i = 0; i < count; i++) {
+      samples[i] = {
+        time: times[i],
+        arcLength: s[i],
+        x: x[i],
+        y: y[i],
+        // heading is the nose; the drawing and readout code upstream reads this the same way
+        // it reads a tank sample, which is the point of keeping the shape identical.
+        heading: heading[i],
+        velocity: v[i],
+        acceleration: accels[i],
+        curvature: k[i],
+        omega: v[i] * rate[i],
+        fieldVx: v[i] * Math.cos(tangent[i]),
+        fieldVy: v[i] * Math.sin(tangent[i]),
+        travelAngle: travel[i]
+      };
+    }
+
+    return {
+      samples: samples,
+      duration: times[count - 1],
+      length: length,
+      reversed: false,
+      holonomic: true,
+      headingPlan: plan.describe()
+    };
+  }
+
+  /** Peak wheel speed anywhere on a holonomic trajectory, for the feasibility readout. */
+  function peakMecanumWheelSpeed(trajectory, kinematics) {
+    var peak = 0;
+    for (var i = 0; i < trajectory.samples.length; i++) {
+      var sample = trajectory.samples[i];
+      var vx = sample.velocity * Math.cos(sample.travelAngle);
+      var vy = sample.velocity * Math.sin(sample.travelAngle) * kinematics.lateralMultiplier;
+      var turn = sample.omega * kinematics.turnRadius;
+      peak = Math.max(peak,
+        Math.abs(vx - vy - turn), Math.abs(vx + vy + turn),
+        Math.abs(vx + vy - turn), Math.abs(vx - vy + turn));
+    }
+    return peak;
+  }
+
+  /** Peak wheel speed anywhere on a trajectory, for the feasibility readout. */
+  function peakWheelSpeed(trajectory, trackWidth) {
+    var peak = 0;
+    for (var i = 0; i < trajectory.samples.length; i++) {
+      var sample = trajectory.samples[i];
+      var omega = sample.velocity * sample.curvature;
+      peak = Math.max(peak,
+        Math.abs(sample.velocity - omega * trackWidth / 2),
+        Math.abs(sample.velocity + omega * trackWidth / 2));
+    }
+    return peak;
+  }
+
+  /**
+   * Least-squares fit of power = kS + kV * velocity, ignoring samples below the point the
+   * robot actually started moving. Those samples are all stiction and dragging them into the
+   * fit pulls kV down and kS up.
+   */
+  function fitFeedforward(rows, minVelocity) {
+    var floor = minVelocity === undefined ? 3.0 : minVelocity;
+    var n = 0, sumV = 0, sumP = 0, sumVV = 0, sumVP = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var velocity = Math.abs(rows[i].velocity);
+      var power = Math.abs(rows[i].power);
+      if (velocity < floor || power <= 0) continue;
+      n++; sumV += velocity; sumP += power; sumVV += velocity * velocity; sumVP += velocity * power;
+    }
+    if (n < 3) return null;
+    var denominator = n * sumVV - sumV * sumV;
+    if (Math.abs(denominator) < 1e-9) return null;
+    var kV = (n * sumVP - sumV * sumP) / denominator;
+    var kS = (sumP - kV * sumV) / n;
+
+    var meanP = sumP / n, ssTotal = 0, ssResidual = 0;
+    for (i = 0; i < rows.length; i++) {
+      var vv = Math.abs(rows[i].velocity), pp = Math.abs(rows[i].power);
+      if (vv < floor || pp <= 0) continue;
+      var predicted = kS + kV * vv;
+      ssResidual += (pp - predicted) * (pp - predicted);
+      ssTotal += (pp - meanP) * (pp - meanP);
+    }
+    return {
+      kS: kS,
+      kV: kV,
+      samples: n,
+      r2: ssTotal > 1e-12 ? 1 - ssResidual / ssTotal : 1
+    };
+  }
+
+  var api = {
+    TAU: TAU,
+    DEFAULT_TANGENT_SCALE: DEFAULT_TANGENT_SCALE,
+    NO_SPEED_CAP: NO_SPEED_CAP,
+    clamp: clamp,
+    lerp: lerp,
+    lerpAngle: lerpAngle,
+    normalizeAngle: normalizeAngle,
+    QuinticHermite: QuinticHermite,
+    SplineSegment: SplineSegment,
+    ArcLengthTable: ArcLengthTable,
+    SplinePath: SplinePath,
+    Constraints: Constraints,
+    HolonomicConstraints: HolonomicConstraints,
+    MecanumKinematics: MecanumKinematics,
+    HeadingPlans: HeadingPlans,
+    generateTrajectory: generateTrajectory,
+    generateHolonomicTrajectory: generateHolonomicTrajectory,
+    peakMecanumWheelSpeed: peakMecanumWheelSpeed,
+    peakWheelSpeed: peakWheelSpeed,
+    fitFeedforward: fitFeedforward
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  } else {
+    root.TreadMath = api;
+  }
+}(typeof window !== 'undefined' ? window : this));
+
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var TM = window.TreadMath;
+  var FIELD = 144;
+  var DEG = Math.PI / 180;
+
+  // ---------------------------------------------------------------- state
+
+  // 'tank' or 'mecanum'. The drivetrain decides which library the page is planning for, so
+  // it changes the maths, the export and half the vocabulary -- not just a drawing.
+  var DRIVE_STORE = 'tread.drive';
+  var drive = 'tank';
+
+  function isMecanum() {
+    return drive === 'mecanum';
+  }
+
+  var state = {
+    start: { x: 9, y: 60, heading: 0 },
+    steps: [],
+    selected: -1,
+    scrub: 0,
+    log: null
+  };
+
+  var built = null;
+
+  // The field image is deliberately not part of `state`: it is a per-browser preference, not
+  // part of the route, and it must never end up in the exported Java.
+  var FIELD_STORE = 'tread.fieldImage';
+  // Inlined by build_viz.py from tools/fields/biobuzz.webp. Empty if that file was removed,
+  // in which case the planner simply opens on the bare tile grid.
+  var DEFAULT_FIELD = 'data:image/webp;base64,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';
+  var DEFAULT_FIELD_OPACITY = 0.85;
+  // A view preference like the image itself, so it rides along in the same stored entry.
+  var showGrid = true;
+  var fieldImage = {
+    url: null, rotation: 0, opacity: DEFAULT_FIELD_OPACITY, image: null, ready: false
+  };
+
+  function kinematics() {
+    return new TM.MecanumKinematics({
+      turnRadius: num('turnRadius', 13),
+      lateralMultiplier: num('lateralMult', 1.15)
+    });
+  }
+
+  function holonomicLimits() {
+    return new TM.HolonomicConstraints({
+      maxVelocity: num('maxVel', 40),
+      maxAcceleration: num('maxAcc', 50),
+      maxDeceleration: num('maxDec', 45),
+      maxCentripetalAcceleration: num('maxCent', 40),
+      maxWheelVelocity: num('maxWheel', 50),
+      maxAngularVelocity: num('maxOmega', 170) * DEG
+    });
+  }
+
+  function limits() {
+    return new TM.Constraints({
+      maxVelocity: num('maxVel', 40),
+      maxAcceleration: num('maxAcc', 50),
+      maxDeceleration: num('maxDec', 45),
+      maxCentripetalAcceleration: num('maxCent', 40),
+      maxWheelVelocity: num('maxWheel', 50),
+      trackWidth: num('trackWidth', 14)
+    });
+  }
+
+  // ---------------------------------------------------------------- units
+  //
+  // Inches are the only unit this page thinks in. The library works in inches, the datalogs
+  // are in inches, and the exported Java is in inches, so metric is a display conversion
+  // applied at the edge and nowhere else. Convert internally and the export would quietly
+  // start generating routes in the wrong scale, which is the kind of bug that ends up on a
+  // field rather than on a screen.
+  var UNIT_STORE = 'tread.units';
+  var CM_PER_INCH = 2.54;
+  var metric = false;
+
+  function toDisplay(inches) {
+    return metric ? inches * CM_PER_INCH : inches;
+  }
+
+  function fromDisplay(shown) {
+    return metric ? shown / CM_PER_INCH : shown;
+  }
+
+  /** Distance for the readout, with its unit. */
+  function showLength(inches, digits) {
+    return toDisplay(inches).toFixed(digits === undefined ? 1 : digits)
+      + (metric ? ' cm' : ' in');
+  }
+
+  function showSpeed(inchesPerSecond) {
+    return toDisplay(inchesPerSecond).toFixed(1) + (metric ? ' cm/s' : ' in/s');
+  }
+
+  /** Rewrites '(in)' and '(in/s)' in a label to whichever unit is showing. */
+  function unitText(text) {
+    return metric ? text.replace(/\bin\b/g, 'cm') : text;
+  }
+
+  function num(id, fallback) {
+    var input = document.getElementById(id);
+    var value = parseFloat(input.value);
+    if (!isFinite(value)) return fallback;
+    // Fallbacks are quoted in inches, so only a real reading needs converting.
+    return input.hasAttribute('data-len') ? fromDisplay(value) : value;
+  }
+
+  function setNumber(id, inches) {
+    var input = document.getElementById(id);
+    if (input.hasAttribute('data-raw')) {
+      // A quarter is the right quantum for a distance and the wrong one for a ratio: snapping
+      // a lateral multiplier of 1.2 to 1.25 silently retunes somebody's robot.
+      input.value = String(Math.round(inches * 1000) / 1000);
+      return;
+    }
+    if (!input.hasAttribute('data-len')) {
+      input.value = String(round(inches));
+      return;
+    }
+    // A quarter inch is a sensible quantum to snap to; a quarter centimetre is not, so in
+    // metric the display carries two decimals instead.
+    input.value = metric ? String(Math.round(toDisplay(inches) * 100) / 100)
+                         : String(round(inches));
+  }
+
+  function applyUnits() {
+    document.getElementById('unitToggle').textContent = metric ? 'cm' : 'in';
+    var labels = document.getElementsByTagName('label');
+    for (var i = 0; i < labels.length; i++) {
+      if (!labels[i].hasAttribute('data-label')) {
+        labels[i].setAttribute('data-label', labels[i].innerHTML);
+      }
+      labels[i].innerHTML = unitText(labels[i].getAttribute('data-label'));
+    }
+  }
+
+  function setMetric(on) {
+    var inputs = document.querySelectorAll('[data-len]');
+    var held = [];
+    var i;
+    // Read every field in inches before the unit changes under it, then write them back.
+    for (i = 0; i < inputs.length; i++) held.push(num(inputs[i].id, 0));
+    metric = on;
+    for (i = 0; i < inputs.length; i++) setNumber(inputs[i].id, held[i]);
+    applyUnits();
+    try {
+      window.localStorage.setItem(UNIT_STORE, on ? 'cm' : 'in');
+    } catch (err) {
+      // Remembering the preference is a convenience, not worth failing over.
+    }
+    refresh();
+  }
+
+  // ---------------------------------------------------------------- route building
+  //
+  // Mirrors RouteBuilder: waypoints accumulate into a path, and anything else flushes it.
+  // Direction changes flush too, which is what makes a cusp show up as a real stop rather
+  // than a lurch the robot discovers at a competition.
+
+  function buildRoute() {
+    var constraints = isMecanum() ? holonomicLimits() : limits();
+    var kin = kinematics();
+    var cursor = { x: state.start.x, y: state.start.y, heading: state.start.heading };
+    var reversed = false;
+    var pending = [];
+    var pendingNose = [];
+    var pendingReversed = false;
+    var segments = [];
+    var problems = [];
+
+    function travel(pose, rev) {
+      return {
+        x: pose.x, y: pose.y,
+        heading: rev ? TM.normalizeAngle(pose.heading + Math.PI) : pose.heading,
+        tangentScale: pose.tangentScale,
+        maxSpeed: pose.maxSpeed
+      };
+    }
+
+    /**
+     * The heading plan for the leg being closed.
+     *
+     * <p>Every waypoint set to follow the path means the nose does what a tank drive's nose
+     * has no choice about, so the exact tangent plan is used. Otherwise the nose is whatever
+     * each waypoint asked for, interpolated in between -- and a waypoint still set to follow
+     * contributes the tangent angle where it sits.
+     */
+    function planFor(path) {
+      var allTangent = true;
+      for (var i = 0; i < pendingNose.length; i++) {
+        if (!pendingNose[i].tangent) { allTangent = false; break; }
+      }
+      if (allTangent) return TM.HeadingPlans.tangent();
+
+      var headings = [];
+      for (i = 0; i < pendingNose.length; i++) {
+        // starts[i] is where segment i begins, so waypoint i sits there -- except the last
+        // one, which is the end of the path.
+        var arc = i === 0 ? 0 : (i < path.starts.length ? path.starts[i] : path.length);
+        headings.push(pendingNose[i].tangent ? path.poseAt(arc).heading : pendingNose[i].heading);
+      }
+      return TM.HeadingPlans.byWaypoints(headings);
+    }
+
+    function flush() {
+      if (pending.length < 2) { pending = []; pendingNose = []; return; }
+      try {
+        var path = new TM.SplinePath(pending);
+        var trajectory = isMecanum()
+          ? TM.generateHolonomicTrajectory(path, planFor(path), constraints, kin)
+          : TM.generateTrajectory(path, constraints, pendingReversed);
+        segments.push({
+          kind: 'drive',
+          reversed: !isMecanum() && pendingReversed,
+          path: path,
+          trajectory: trajectory
+        });
+      } catch (error) {
+        problems.push(error.message);
+      }
+      pending = [];
+      pendingNose = [];
+    }
+
+    for (var i = 0; i < state.steps.length; i++) {
+      var step = state.steps[i];
+      step._segmentIndex = -1;
+
+      if (step.type === 'waypoint') {
+        if (pending.length === 0) {
+          pending.push(travel(cursor, reversed));
+          // The leg starts where the nose already is.
+          pendingNose.push({ tangent: false, heading: cursor.heading });
+          pendingReversed = reversed;
+        }
+        pending.push(travel(step, reversed));
+        pendingNose.push(noseOf(step));
+        cursor = {
+          x: step.x, y: step.y,
+          heading: isMecanum() && !noseOf(step).tangent ? noseOf(step).heading : step.heading
+        };
+        step._segmentIndex = segments.length;
+      } else if (step.type === 'reverse') {
+        // A holonomic drive has no cusp to insert, so the step is inert rather than an error:
+        // a route written for a tank robot still loads and still means something.
+        if (!isMecanum()) {
+          flush();
+          reversed = step.value;
+        }
+      } else if (step.type === 'turn') {
+        flush();
+        segments.push({ kind: 'turn', pose: { x: cursor.x, y: cursor.y, heading: cursor.heading },
+                        target: step.heading });
+        cursor = { x: cursor.x, y: cursor.y, heading: step.heading };
+      } else if (step.type === 'hold') {
+        flush();
+        segments.push({ kind: 'hold', pose: { x: cursor.x, y: cursor.y, heading: cursor.heading },
+                        seconds: step.seconds });
+      } else if (step.type === 'wait') {
+        flush();
+        segments.push({ kind: 'wait', pose: { x: cursor.x, y: cursor.y, heading: cursor.heading },
+                        seconds: step.seconds });
+      }
+    }
+    flush();
+
+    // Turns and holds have no trajectory, so their duration is estimated: a turn from its
+    // trapezoidal profile, a hold from a guess of how long convergence takes.
+    var totalTime = 0;
+    var timeline = [];
+    for (i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+      var duration;
+      if (seg.kind === 'drive') {
+        duration = seg.trajectory.duration;
+      } else if (seg.kind === 'turn') {
+        duration = turnDuration(Math.abs(TM.normalizeAngle(seg.target - seg.pose.heading)));
+      } else {
+        duration = seg.seconds;
+      }
+      timeline.push({ segment: seg, start: totalTime, duration: duration });
+      totalTime += duration;
+    }
+
+    return {
+      segments: segments,
+      timeline: timeline,
+      totalTime: totalTime,
+      constraints: constraints,
+      end: cursor,
+      problems: problems
+    };
+  }
+
+  /**
+   * What the nose does at a waypoint. Tank routes have no such field and never need one --
+   * the heading a waypoint carries is the direction of travel there, and the nose has no
+   * separate opinion.
+   */
+  function noseOf(step) {
+    if (!isMecanum() || !step.nose || step.nose.tangent !== false) {
+      return { tangent: true, heading: step.heading };
+    }
+    return { tangent: false, heading: step.nose.heading };
+  }
+
+  function setDrive(next) {
+    drive = next === 'mecanum' ? 'mecanum' : 'tank';
+    document.documentElement.setAttribute('data-drive', drive);
+    applyDriveWording();
+    document.getElementById('driveTank').className = drive === 'tank' ? 'seg on' : 'seg';
+    document.getElementById('driveMecanum').className = drive === 'mecanum' ? 'seg on' : 'seg';
+    try {
+      window.localStorage.setItem(DRIVE_STORE, drive);
+    } catch (err) {
+      // Remembering the drivetrain is a convenience, not worth failing the page over.
+    }
+    refresh();
+  }
+
+  /** The vocabulary changes with the drivetrain, so the page's own words have to as well. */
+  function applyDriveWording() {
+    document.getElementById('headerHint').innerHTML = isMecanum()
+      ? 'click the field to add a waypoint &middot; drag to move &middot; drag the arrow to '
+        + 'shape the path &middot; the nose is set per waypoint'
+      : 'click the field to add a waypoint &middot; drag to move &middot; drag the nose to aim '
+        + '&middot; drag the robot to set the start';
+  }
+
+  function turnDuration(angle) {
+    var maxRate = 3.0, maxAccel = 6.0;
+    var rampTime = maxRate / maxAccel;
+    var rampAngle = 0.5 * maxAccel * rampTime * rampTime;
+    if (2 * rampAngle >= angle) return 2 * Math.sqrt(angle / maxAccel);
+    return 2 * rampTime + (angle - 2 * rampAngle) / maxRate;
+  }
+
+  // ---------------------------------------------------------------- drawing
+
+  var field = document.getElementById('field');
+  var fieldCtx = field.getContext('2d');
+  var profile = document.getElementById('profile');
+  var profileCtx = profile.getContext('2d');
+
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function sizeCanvas(canvas, aspect) {
+    var ratio = window.devicePixelRatio || 1;
+    var width = canvas.clientWidth || 900;
+    var height = Math.round(width * aspect);
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    canvas.style.height = height + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return { width: width, height: height };
+  }
+
+  var view = { size: 900, scale: 900 / FIELD };
+
+  // Height of the profile canvas as a fraction of its width, and the two margins between the
+  // field, the profile and the legend. Kept next to fitStage because that is the only place
+  // the arithmetic below has to agree with the stylesheet.
+  var PROFILE_ASPECT = 210 / 900;
+  var STAGE_GAPS = 12 + 8;
+  var MIN_FIELD = 260;
+
+  /**
+   * Picks the largest square field that still leaves room for the profile underneath it,
+   * inside whatever height the stage column has. Everything downstream measures the canvas,
+   * so setting this width is all it takes for the robot, the handles and the hit-testing to
+   * stay honest at any size.
+   */
+  var lastFit = null;
+
+  function fitStage() {
+    var stage = document.getElementById('stage');
+    var root = document.documentElement;
+    if (!window.matchMedia('(min-width: 1081px)').matches) {
+      if (lastFit !== null) {
+        lastFit = null;
+        root.style.removeProperty('--fit');
+      }
+      return;
+    }
+    var transport = stage.querySelector('.transport');
+    var legend = stage.querySelector('.legend');
+    // Writing --fit can toggle .stage's own scrollbar, which changes stage.clientWidth --
+    // one of the inputs this very calculation just used. Re-measure after each write until
+    // the size stops moving (or we give up after a few tries) so the frame that gets drawn
+    // is the converged size, not an intermediate one on its way there.
+    var next = lastFit;
+    for (var i = 0; i < 4; i++) {
+      var available = stage.clientHeight - transport.offsetHeight - legend.offsetHeight - STAGE_GAPS;
+      var size = available / (1 + PROFILE_ASPECT);
+      size = Math.min(Math.max(size, MIN_FIELD), stage.clientWidth);
+      var candidate = Math.floor(size) + 'px';
+      if (candidate === next) break;
+      next = candidate;
+      root.style.setProperty('--fit', next);
+    }
+    lastFit = next;
+  }
+
+  function toScreen(x, y) {
+    // Field y runs up; canvas y runs down.
+    return { x: x * view.scale, y: view.size - y * view.scale };
+  }
+
+  function toField(px, py) {
+    return { x: px / view.scale, y: (view.size - py) / view.scale };
+  }
+
+  function drawField() {
+    var box = sizeCanvas(field, 1);
+    view.size = box.width;
+    view.scale = box.width / FIELD;
+    var ctx = fieldCtx;
+
+    ctx.clearRect(0, 0, box.width, box.height);
+    ctx.fillStyle = css('--tile');
+    ctx.fillRect(0, 0, box.width, box.height);
+
+    // The field photo goes under the grid, never over it: the grid is the thing you actually
+    // measure against, and a photo that hides it is worse than no photo.
+    if (fieldImage.ready) {
+      ctx.save();
+      ctx.globalAlpha = fieldImage.opacity;
+      // The field is square, so a quarter turn about the centre needs no change of extent.
+      ctx.translate(box.width / 2, box.height / 2);
+      ctx.rotate(fieldImage.rotation * Math.PI / 180);
+      ctx.drawImage(fieldImage.image, -box.width / 2, -box.height / 2, box.width, box.height);
+      ctx.restore();
+    }
+
+    // 24 inch foam tiles, with a 6 inch subgrid. Turned off, the field photo is left to
+    // speak for itself, which is what you want once the route is drawn and you are looking
+    // at where it actually goes.
+    if (showGrid) {
+    ctx.strokeStyle = css('--tile-line');
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    for (var i = 6; i < FIELD; i += 6) {
+      if (i % 24 === 0) continue;
+      var p = toScreen(i, 0);
+      ctx.moveTo(p.x, 0); ctx.lineTo(p.x, box.height);
+      var q = toScreen(0, i);
+      ctx.moveTo(0, q.y); ctx.lineTo(box.width, q.y);
+    }
+    ctx.stroke();
+
+    ctx.lineWidth = 1.25;
+    ctx.beginPath();
+    for (i = 24; i < FIELD; i += 24) {
+      var a = toScreen(i, 0);
+      ctx.moveTo(a.x, 0); ctx.lineTo(a.x, box.height);
+      var b = toScreen(0, i);
+      ctx.moveTo(0, b.y); ctx.lineTo(box.width, b.y);
+    }
+    ctx.stroke();
+    }
+
+    // Origin marker: the corner everything is measured from. It stays whether or not the
+    // grid does: without it there is nothing on the canvas saying which corner is zero.
+    ctx.fillStyle = css('--faint');
+    ctx.font = '11px ' + css('--f-mono');
+    ctx.fillText('0,0', 5, box.height - 6);
+    ctx.fillText(metric ? '366' : '144', box.width - 26, box.height - 6);
+    ctx.save();
+    ctx.translate(6, 14);
+    ctx.fillText('y', 0, 0);
+    ctx.restore();
+  }
+
+  function speedColor(fraction) {
+    // Interpolate from the caution colour at a crawl to the primary at full speed, so a
+    // corner the wheel-speed limit has throttled is visible without reading the chart.
+    var slow = hexToRgb(css('--signal'));
+    var fast = hexToRgb(css('--primary'));
+    var t = TM.clamp(fraction, 0, 1);
+    return 'rgb(' + Math.round(slow[0] + (fast[0] - slow[0]) * t) + ','
+                  + Math.round(slow[1] + (fast[1] - slow[1]) * t) + ','
+                  + Math.round(slow[2] + (fast[2] - slow[2]) * t) + ')';
+  }
+
+  function hexToRgb(hex) {
+    var clean = hex.replace('#', '').trim();
+    if (clean.length === 3) {
+      clean = clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2];
+    }
+    var value = parseInt(clean, 16);
+    if (!isFinite(value)) return [128, 128, 128];
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  }
+
+  function drawRoute() {
+    var ctx = fieldCtx;
+    if (!built) return;
+
+    var peak = 1;
+    built.segments.forEach(function (seg) {
+      if (seg.kind !== 'drive') return;
+      seg.trajectory.samples.forEach(function (s) {
+        peak = Math.max(peak, Math.abs(s.velocity));
+      });
+    });
+
+    built.segments.forEach(function (seg) {
+      if (seg.kind !== 'drive') return;
+      var samples = seg.trajectory.samples;
+      ctx.lineWidth = seg.reversed ? 2.5 : 3.5;
+      if (seg.reversed) ctx.setLineDash([7, 5]); else ctx.setLineDash([]);
+      for (var i = 1; i < samples.length; i++) {
+        var a = toScreen(samples[i - 1].x, samples[i - 1].y);
+        var b = toScreen(samples[i].x, samples[i].y);
+        ctx.strokeStyle = seg.reversed ? css('--signal')
+                                       : speedColor(Math.abs(samples[i].velocity) / peak);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    });
+
+    built.segments.forEach(function (seg) {
+      if (seg.kind === 'turn') {
+        drawTurnMarker(seg.pose, seg.target);
+      } else if (seg.kind === 'hold') {
+        drawHoldMarker(seg.pose);
+      }
+    });
+
+    drawPose(state.start, css('--faint'), true, 'start');
+    for (var i = 0; i < state.steps.length; i++) {
+      var step = state.steps[i];
+      if (step.type !== 'waypoint') continue;
+      var selected = i === state.selected;
+      drawPose(step, selected ? css('--danger') : css('--primary'), selected, String(i + 1));
+      // On a mecanum the arrow above shapes the path and this one says where the robot looks
+      // while it drives it. Drawn only where they differ, so the field does not fill up with
+      // arrows agreeing with each other.
+      if (isMecanum()) {
+        var nose = noseOf(step);
+        if (!nose.tangent) drawNoseMarker(step, nose.heading);
+      }
+    }
+
+    if (state.log && state.log.actual && state.log.actual.length > 1) {
+      ctx.strokeStyle = css('--actual');
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      var first = toScreen(state.log.actual[0].x, state.log.actual[0].y);
+      ctx.moveTo(first.x, first.y);
+      for (i = 1; i < state.log.actual.length; i++) {
+        var p = toScreen(state.log.actual[i].x, state.log.actual[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  /** A dashed arrow for a nose that is not simply following the path. */
+  function drawNoseMarker(step, heading) {
+    var ctx = fieldCtx;
+    var from = toScreen(step.x, step.y);
+    var to = toScreen(step.x + Math.cos(heading) * 13, step.y + Math.sin(heading) * 13);
+
+    ctx.save();
+    ctx.strokeStyle = css('--actual');
+    ctx.fillStyle = css('--actual');
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var angle = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - Math.cos(angle - 0.4) * 6, to.y - Math.sin(angle - 0.4) * 6);
+    ctx.lineTo(to.x - Math.cos(angle + 0.4) * 6, to.y - Math.sin(angle + 0.4) * 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPose(pose, color, emphasised, label) {
+    var ctx = fieldCtx;
+    var p = toScreen(pose.x, pose.y);
+    var radius = emphasised ? 7 : 5.5;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // The nose. On a nonholonomic robot the heading you write is the heading it points, so
+    // this is the single most useful thing on the canvas.
+    var nose = toScreen(pose.x + Math.cos(pose.heading) * 9,
+                        pose.y + Math.sin(pose.heading) * 9);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(nose.x, nose.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(nose.x, nose.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (label) {
+      ctx.fillStyle = css('--ink');
+      ctx.font = '10px ' + css('--f-mono');
+      ctx.fillText(label, p.x + 9, p.y - 8);
+    }
+  }
+
+  function drawTurnMarker(pose, target) {
+    var ctx = fieldCtx;
+    var p = toScreen(pose.x, pose.y);
+    var delta = TM.normalizeAngle(target - pose.heading);
+    ctx.strokeStyle = css('--ink');
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 14, -pose.heading, -target, delta > 0);
+    ctx.stroke();
+  }
+
+  function drawHoldMarker(pose) {
+    var ctx = fieldCtx;
+    var p = toScreen(pose.x, pose.y);
+    ctx.strokeStyle = css('--danger');
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x - 7, p.y - 7, 14, 14);
+  }
+
+  function drawRobot(pose, active) {
+    var ctx = fieldCtx;
+    var length = num('robotLength', 17);
+    var width = num('robotWidth', 16);
+    var p = toScreen(pose.x, pose.y);
+
+    // Drawn the way the landing page draws it: a light body with dark trim, four wheels and
+    // a filled nose. The wheels are what stop it reading as a generic box -- they say which
+    // way the thing is built to move, which on a tank robot is the whole point.
+    var body = length * view.scale;
+    var beam = width * view.scale;
+    var trim = active ? css('--primary') : css('--ink');
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(-pose.heading);
+
+    ctx.fillStyle = active ? css('--primary-w') : css('--surface');
+    ctx.strokeStyle = trim;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.rect(-body / 2, -beam / 2, body, beam);
+    ctx.fill();
+    ctx.stroke();
+
+    // The wheels straddle the track width, so the number you type for it is something you can
+    // see rather than something you have to take on trust. On a mecanum they straddle the
+    // turn radius instead, which is the moment arm that number describes.
+    ctx.fillStyle = trim;
+    var wheelLength = body * 0.3;
+    var wheelWidth = beam * 0.16;
+    var halfTrack = isMecanum()
+      ? num('turnRadius', 13) * view.scale * 0.62
+      : num('trackWidth', 14) * view.scale / 2;
+    ctx.fillRect(-body * 0.4, -halfTrack - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.fillRect(body * 0.1, -halfTrack - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.fillRect(-body * 0.4, halfTrack - wheelWidth / 2, wheelLength, wheelWidth);
+    ctx.fillRect(body * 0.1, halfTrack - wheelWidth / 2, wheelLength, wheelWidth);
+
+    // Rollers, drawn only on a mecanum: four dark blocks with a diagonal through them is how
+    // everyone draws this drivetrain, and it is the fastest way to see which mode you are in.
+    if (isMecanum()) {
+      ctx.strokeStyle = active ? css('--primary-w') : css('--surface');
+      ctx.lineWidth = 1.4;
+      var corners = [[-body * 0.4, -halfTrack], [body * 0.1, -halfTrack],
+                     [-body * 0.4, halfTrack], [body * 0.1, halfTrack]];
+      for (var w = 0; w < corners.length; w++) {
+        var cx = corners[w][0];
+        var cy = corners[w][1] - wheelWidth / 2;
+        // Front-left and back-right rollers lie one way, the other pair the other way.
+        var flip = (w === 0 || w === 3) ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + (flip > 0 ? wheelWidth : 0));
+        ctx.lineTo(cx + wheelLength, cy + (flip > 0 ? 0 : wheelWidth));
+        ctx.stroke();
+      }
+    }
+
+    ctx.fillStyle = trim;
+    ctx.beginPath();
+    ctx.moveTo(body / 2, 0);
+    ctx.lineTo(body / 2 - beam * 0.22, -beam * 0.16);
+    ctx.lineTo(body / 2 - beam * 0.22, beam * 0.16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** True if a field-space point falls inside the robot footprint at this pose. */
+  function hitRobot(point, pose) {
+    var length = num('robotLength', 17);
+    var width = num('robotWidth', 16);
+    var dx = point.x - pose.x;
+    var dy = point.y - pose.y;
+    var cos = Math.cos(pose.heading);
+    var sin = Math.sin(pose.heading);
+    var along = dx * cos + dy * sin;
+    var across = -dx * sin + dy * cos;
+    return Math.abs(along) <= length / 2 && Math.abs(across) <= width / 2;
+  }
+
+  /**
+   * The robot is only a handle while it is sitting at the start, which is where it represents
+   * a pose you can choose. Once the scrubber has moved it, it is showing playback, and
+   * dragging it would mean editing one thing while pointing at another.
+   */
+  function robotIsHandle() {
+    return state.scrub <= 1e-6;
+  }
+
+  /** True over the start pose's nose handle, which drawPose puts 9 inches out. */
+  function hitStartNose(point) {
+    var tolerance = 7 / view.scale;
+    var nx = state.start.x + Math.cos(state.start.heading) * 9;
+    var ny = state.start.y + Math.sin(state.start.heading) * 9;
+    return Math.hypot(point.x - nx, point.y - ny) < tolerance;
+  }
+
+  function poseAtTime(t) {
+    if (!built || !built.timeline.length) return null;
+    for (var i = 0; i < built.timeline.length; i++) {
+      var entry = built.timeline[i];
+      if (t <= entry.start + entry.duration || i === built.timeline.length - 1) {
+        var local = TM.clamp(t - entry.start, 0, entry.duration);
+        if (entry.segment.kind === 'drive') {
+          var samples = entry.segment.trajectory.samples;
+          var index = 0;
+          while (index < samples.length - 1 && samples[index + 1].time < local) index++;
+          return { pose: samples[index], segment: entry.segment, local: local };
+        }
+        if (entry.segment.kind === 'turn') {
+          var fraction = entry.duration > 0 ? local / entry.duration : 1;
+          var delta = TM.normalizeAngle(entry.segment.target - entry.segment.pose.heading);
+          return {
+            pose: {
+              x: entry.segment.pose.x, y: entry.segment.pose.y,
+              heading: entry.segment.pose.heading + delta * fraction,
+              velocity: 0, curvature: 0, arcLength: 0
+            },
+            segment: entry.segment, local: local
+          };
+        }
+        return {
+          pose: {
+            x: entry.segment.pose.x, y: entry.segment.pose.y,
+            heading: entry.segment.pose.heading, velocity: 0, curvature: 0, arcLength: 0
+          },
+          segment: entry.segment, local: local
+        };
+      }
+    }
+    return null;
+  }
+
+  function drawProfile() {
+    var box = sizeCanvas(profile, 210 / 900);
+    var ctx = profileCtx;
+    ctx.clearRect(0, 0, box.width, box.height);
+    ctx.fillStyle = css('--surface');
+    ctx.fillRect(0, 0, box.width, box.height);
+
+    if (!built || !built.totalTime) return;
+
+    var padLeft = 44, padRight = 12, padTop = 14, padBottom = 24;
+    var plotWidth = box.width - padLeft - padRight;
+    var plotHeight = box.height - padTop - padBottom;
+
+    var peakSpeed = 1, peakCurvature = 0.001;
+    built.segments.forEach(function (seg) {
+      if (seg.kind !== 'drive') return;
+      seg.trajectory.samples.forEach(function (s) {
+        peakSpeed = Math.max(peakSpeed, Math.abs(s.velocity));
+        peakCurvature = Math.max(peakCurvature, Math.abs(s.curvature));
+      });
+    });
+
+    ctx.strokeStyle = css('--line-soft');
+    ctx.lineWidth = 1;
+    ctx.font = '10px ' + css('--f-mono');
+    ctx.fillStyle = css('--faint');
+    for (var g = 0; g <= 4; g++) {
+      var y = padTop + plotHeight * g / 4;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(padLeft + plotWidth, y);
+      ctx.stroke();
+      ctx.fillText((peakSpeed * (1 - g / 4)).toFixed(0), 6, y + 3);
+    }
+    ctx.fillText('in/s', 6, padTop - 4);
+    ctx.fillText(built.totalTime.toFixed(1) + ' s', padLeft + plotWidth - 30, box.height - 8);
+
+    // Curvature first, underneath, so speed reads on top of it.
+    ctx.strokeStyle = css('--signal');
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.5;
+    plotSeries(ctx, function (s) { return Math.abs(s.curvature) / peakCurvature; },
+               padLeft, padTop, plotWidth, plotHeight);
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = css('--primary');
+    ctx.lineWidth = 2;
+    plotSeries(ctx, function (s) { return Math.abs(s.velocity) / peakSpeed; },
+               padLeft, padTop, plotWidth, plotHeight);
+
+    var marker = padLeft + plotWidth * TM.clamp(state.scrub / built.totalTime, 0, 1);
+    ctx.strokeStyle = css('--danger');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(marker, padTop);
+    ctx.lineTo(marker, padTop + plotHeight);
+    ctx.stroke();
+  }
+
+  function plotSeries(ctx, accessor, padLeft, padTop, plotWidth, plotHeight) {
+    // One subpath per drive segment. Joining across a turn or a hold would draw a line
+    // through time the robot spends not driving, which is exactly the part of a route where
+    // a misleading chart costs you.
+    built.timeline.forEach(function (entry) {
+      if (entry.segment.kind !== 'drive') return;
+      ctx.beginPath();
+      entry.segment.trajectory.samples.forEach(function (s, index) {
+        var t = entry.start + s.time;
+        var x = padLeft + plotWidth * (t / built.totalTime);
+        var y = padTop + plotHeight * (1 - TM.clamp(accessor(s), 0, 1));
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    });
+  }
+
+  // ---------------------------------------------------------------- readouts
+
+  function renderReadout() {
+    var table = document.getElementById('readout');
+    if (!built) { table.innerHTML = ''; return; }
+
+    var at = poseAtTime(state.scrub);
+    var rows = [];
+    rows.push(['total time', built.totalTime.toFixed(2) + ' s', '']);
+
+    var driveLength = 0;
+    built.segments.forEach(function (seg) {
+      if (seg.kind === 'drive') driveLength += seg.trajectory.length;
+    });
+    rows.push(['path length', showLength(driveLength), '']);
+    rows.push(['segments', String(built.segments.length), '']);
+
+    var trackWidth = num('trackWidth', 14);
+    var kin = kinematics();
+    var peakWheel = 0;
+    built.segments.forEach(function (seg) {
+      if (seg.kind !== 'drive') return;
+      peakWheel = Math.max(peakWheel, isMecanum()
+        ? TM.peakMecanumWheelSpeed(seg.trajectory, kin)
+        : TM.peakWheelSpeed(seg.trajectory, trackWidth));
+    });
+    var wheelLimit = num('maxWheel', 50);
+    rows.push(['peak wheel speed', showSpeed(peakWheel),
+               peakWheel > wheelLimit + 0.5 ? 'bad' : '']);
+
+    if (at) {
+      rows.push(['&mdash;', '', '']);
+      rows.push(['t', state.scrub.toFixed(2) + ' s', '']);
+      rows.push(['x, y', toDisplay(at.pose.x).toFixed(1) + ', '
+                 + toDisplay(at.pose.y).toFixed(1) + (metric ? ' cm' : ' in'), '']);
+      rows.push(['heading', (at.pose.heading / DEG).toFixed(0) + '&deg;', '']);
+      rows.push(['velocity', showSpeed(at.pose.velocity || 0), '']);
+      if (isMecanum()) {
+        rows.push(['turn rate', ((at.pose.omega || 0) / DEG).toFixed(0) + '&deg;/s', '']);
+        // Zero on a tank drive by definition, which is why the row is not worth showing there.
+        rows.push(['travel vs nose', ((at.pose.travelAngle || 0) / DEG).toFixed(0) + '&deg;', '']);
+      }
+      if (at.pose.curvature) {
+        var radius = 1 / Math.abs(at.pose.curvature);
+        rows.push(['turn radius',
+                   radius > 999 ? 'straight' : showLength(radius, 0), '']);
+      }
+    }
+
+    if (built.problems.length) {
+      built.problems.forEach(function (message) {
+        rows.push(['problem', message, 'bad']);
+      });
+    }
+
+    table.innerHTML = rows.map(function (row) {
+      return '<tr><td>' + row[0] + '</td><td class="' + row[2] + '">' + row[1] + '</td></tr>';
+    }).join('');
+  }
+
+  function renderSteps() {
+    var list = document.getElementById('stepList');
+    if (!state.steps.length) {
+      list.innerHTML = '<li style="cursor:default;color:var(--faint)">'
+        + '<span class="idx"></span><span>click the field to add a waypoint</span><span></span></li>';
+      return;
+    }
+    var reversed = false;
+    list.innerHTML = state.steps.map(function (step, index) {
+      var kind, detail;
+      if (step.type === 'waypoint') {
+        kind = reversed ? 'reverse' : 'spline';
+        detail = step.x.toFixed(1) + ', ' + step.y.toFixed(1)
+               + '  @' + Math.round(step.heading / DEG) + '&deg;'
+               + (step.maxSpeed > 0 ? '  &le;' + showSpeed(step.maxSpeed) : '');
+      } else if (step.type === 'turn') {
+        kind = 'turn'; detail = 'to ' + Math.round(step.heading / DEG) + '&deg;';
+      } else if (step.type === 'hold') {
+        kind = 'hold'; detail = step.seconds.toFixed(1) + ' s';
+      } else if (step.type === 'wait') {
+        kind = 'wait'; detail = step.seconds.toFixed(1) + ' s';
+      } else {
+        reversed = step.value;
+        kind = step.value ? 'reversed' : 'forward';
+        detail = 'cusp &mdash; robot stops and changes direction';
+      }
+      return '<li data-index="' + index + '" class="'
+        + (index === state.selected ? 'selected ' : '')
+        + (reversed && step.type === 'waypoint' ? 'rev' : '') + '">'
+        + '<span class="idx">' + (index + 1) + '</span>'
+        + '<span><span class="kind">' + kind + '</span> ' + detail + '</span>'
+        + rowOps(index, state.steps.length) + '</li>';
+    }).join('');
+
+    Array.prototype.forEach.call(list.querySelectorAll('li[data-index]'), function (item) {
+      item.addEventListener('click', function () {
+        state.selected = parseInt(item.getAttribute('data-index'), 10);
+        refresh();
+      });
+    });
+
+    Array.prototype.forEach.call(list.querySelectorAll('.ops button'), function (button) {
+      button.addEventListener('click', function (event) {
+        // Without this the row underneath also handles the click and selects a step that may
+        // have just moved or stopped existing.
+        event.stopPropagation();
+        var index = parseInt(button.getAttribute('data-index'), 10);
+        var action = button.getAttribute('data-act');
+        if (action === 'del') {
+          removeStep(index);
+        } else {
+          move(index, action === 'up' ? -1 : 1);
+        }
+      });
+    });
+  }
+
+  // 13px line icons, drawn rather than typed: the glyphs that would do this job (arrows, a
+  // wastebasket) render as emoji on some platforms and as a different weight on others.
+  var ICON_UNDO = '<svg viewBox="0 0 16 16"><path d="M3.5 7.5h6a3 3 0 0 1 0 6H7'
+    + 'M3.5 7.5l3-3M3.5 7.5l3 3"/></svg>';
+  var ICON_REDO = '<svg viewBox="0 0 16 16"><path d="M12.5 7.5h-6a3 3 0 0 0 0 6H9'
+    + 'M12.5 7.5l-3-3M12.5 7.5l-3 3"/></svg>';
+  var ICON_UP = '<svg viewBox="0 0 16 16"><path d="M8 12.5v-9M4 7.5l4-4 4 4"/></svg>';
+  var ICON_DOWN = '<svg viewBox="0 0 16 16"><path d="M8 3.5v9M4 8.5l4 4 4-4"/></svg>';
+  var ICON_TRASH = '<svg viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5'
+    + 'M4.6 4.5l.6 8h5.6l.6-8M6.8 6.9v3.5M9.2 6.9v3.5"/></svg>';
+
+  function rowOps(index, count) {
+    function button(action, label, icon, disabled) {
+      return '<button type="button" class="' + (action === 'del' ? 'del' : '')
+        + '" data-act="' + action + '" data-index="' + index + '" title="' + label
+        + '" aria-label="' + label + '"' + (disabled ? ' disabled' : '') + '>' + icon + '</button>';
+    }
+    return '<span class="ops">'
+      + button('up', 'move up', ICON_UP, index === 0)
+      + button('down', 'move down', ICON_DOWN, index === count - 1)
+      + button('del', 'delete', ICON_TRASH, false)
+      + '</span>';
+  }
+
+  function removeStep(index) {
+    if (index < 0 || index >= state.steps.length) return;
+    state.steps.splice(index, 1);
+    if (state.selected > index) {
+      state.selected--;
+    }
+    state.selected = Math.min(state.selected, state.steps.length - 1);
+    refresh();
+  }
+
+  function renderEditor() {
+    var body = document.getElementById('editBody');
+    var step = state.steps[state.selected];
+    if (!step) {
+      body.innerHTML = '<p class="note">Select a step, or click the field to add a waypoint.</p>';
+      return;
+    }
+
+    var html = '';
+    if (step.type === 'waypoint') {
+      html += '<div class="grid3">'
+        + numberField('wpX', unitText('x (in)'), toDisplay(step.x), 0.5, true)
+        + numberField('wpY', unitText('y (in)'), toDisplay(step.y), 0.5, true)
+        + numberField('wpH', 'heading (deg)', step.heading / DEG, 1)
+        + '</div>'
+        + '<div class="grid2" style="margin-top:8px">'
+        + numberField('wpT', 'tangent scale', step.tangentScale || TM.DEFAULT_TANGENT_SCALE, 0.05)
+        + numberField('wpV', unitText('max speed (in/s)'), toDisplay(step.maxSpeed || 0), 1, true)
+        + '</div>'
+        + (isMecanum()
+           ? '<p class="note">Heading here is the direction the robot <b>travels</b> through '
+             + 'this point &mdash; it shapes the path. Where the robot looks while it drives '
+             + 'is the nose, below. Tangent scale bulges the curve outward; drop it toward '
+             + '0.8 to hug the chord.</p>'
+           : '<p class="note">Heading is where the robot\'s <b>nose</b> points, not the direction '
+             + 'of travel. Tangent scale bulges the curve outward; drop it toward 0.8 to hug the '
+             + 'chord.</p>')
+        + (isMecanum() ? noseField(step) : '')
+        + '<p class="note">Max speed caps the leg <b>into</b> this waypoint and nothing after '
+        + 'it &mdash; 0 means no cap. It is a ceiling, not a target: a corner or the wheel-speed '
+        + 'limit can still hold the robot below it. The profile eases down into a capped leg '
+        + 'and back up out of it, so nothing stops at the seam.</p>';
+    } else if (step.type === 'turn') {
+      html += '<div class="grid2">' + numberField('turnH', 'heading (deg)', step.heading / DEG, 1) + '</div>';
+    } else if (step.type === 'hold' || step.type === 'wait') {
+      html += '<div class="grid2">' + numberField('holdS', 'seconds', step.seconds, 0.1) + '</div>';
+      if (step.type === 'hold') {
+        html += '<p class="note">This is what sets your terminal accuracy. Drive segments get '
+             + 'the robot roughly there fast; the hold gets it exactly there.</p>';
+      }
+    } else {
+      html += '<p class="note">Everything after this point drives '
+        + (step.value ? '<b>backwards</b>' : '<b>forwards</b>')
+        + '. The path being built is closed off here and the robot comes to a stop, because '
+        + 'that is the only way a tank drive can change direction.</p>';
+    }
+
+    html += '<div class="row" style="margin-top:10px">'
+      + '<button id="stepUp">move up</button>'
+      + '<button id="stepDown">move down</button>'
+      + '<button id="stepDelete" class="danger">delete</button></div>';
+    body.innerHTML = html;
+
+    bindNumber('wpX', function (v) { step.x = v; });
+    bindNumber('wpY', function (v) { step.y = v; });
+    bindNumber('wpH', function (v) { step.heading = v * DEG; });
+    bindNumber('wpT', function (v) { step.tangentScale = v; });
+    bindNumber('wpV', function (v) { step.maxSpeed = v > 0 ? v : 0; });
+    bindNumber('wpNose', function (v) {
+      step.nose = { tangent: false, heading: v * DEG };
+    });
+    on('noseFollow', function () {
+      step.nose = { tangent: true, heading: step.heading };
+      refresh();
+    });
+    on('noseFix', function () {
+      var current = noseOf(step);
+      step.nose = { tangent: false, heading: current.heading };
+      refresh();
+    });
+    bindNumber('turnH', function (v) { step.heading = v * DEG; });
+    bindNumber('holdS', function (v) { step.seconds = v; });
+
+    on('stepUp', function () { move(state.selected, -1); });
+    on('stepDown', function () { move(state.selected, 1); });
+    on('stepDelete', function () { removeStep(state.selected); });
+  }
+
+  /**
+   * The nose control, which exists only on a holonomic drive.
+   *
+   * <p>On a tank robot the waypoint's heading is the direction of travel and the nose has no
+   * separate opinion, so there is nothing to ask. On a mecanum the two come apart: the arrow
+   * you drag on the field still shapes the <b>path</b>, and this says where the robot looks
+   * while it drives it.
+   */
+  function noseField(step) {
+    var nose = noseOf(step);
+    return '<div class="row" style="margin-top:10px">'
+      + '<span class="hint" style="min-width:34px">nose</span>'
+      + '<button id="noseFollow" class="seg' + (nose.tangent ? ' on' : '') + '">follow path</button>'
+      + '<button id="noseFix" class="seg' + (nose.tangent ? '' : ' on') + '">face</button>'
+      + '</div>'
+      + (nose.tangent ? ''
+         : '<div class="grid2" style="margin-top:8px">'
+           + numberField('wpNose', 'nose heading (deg)', nose.heading / DEG, 1)
+           + '</div>');
+  }
+
+  function numberField(id, label, value, step, isLength) {
+    return '<div><label for="' + id + '">' + label + '</label>'
+      + '<input type="number" id="' + id + '"' + (isLength ? ' data-len' : '')
+      + ' step="' + step + '" value="'
+      + (Math.round(value * 1000) / 1000) + '"></div>';
+  }
+
+  function bindNumber(id, apply) {
+    var input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener('input', function () {
+      var value = parseFloat(input.value);
+      if (!isFinite(value)) return;
+      // The step this writes into is stored in inches, so a length field has to come back
+      // through the conversion. Skipping this stores centimetres as inches and the route
+      // silently changes shape.
+      apply(input.hasAttribute('data-len') ? fromDisplay(value) : value);
+      refresh(true);
+    });
+  }
+
+  function on(id, handler) {
+    var element = document.getElementById(id);
+    if (element) element.addEventListener('click', handler);
+  }
+
+  function move(index, delta) {
+    var target = index + delta;
+    if (index < 0 || target < 0 || target >= state.steps.length) return;
+    var item = state.steps.splice(index, 1)[0];
+    state.steps.splice(target, 0, item);
+    state.selected = target;
+    refresh();
+  }
+
+  // ---------------------------------------------------------------- undo and redo
+  //
+  // Snapshots rather than a log of edits. A route is small -- a few hundred bytes of JSON --
+  // and a planner is a thing you fiddle with, so the cost of storing whole states is nothing
+  // against the cost of getting an inverse-operation log subtly wrong and corrupting somebody's
+  // auto an hour into building it.
+  //
+  // Every change funnels through refresh(), so rather than remembering to record at each of
+  // the twenty places that can edit a route, this watches for the state actually changing.
+  // Drags and typing arrive as a burst of changes a frame apart; those coalesce into one step,
+  // because undoing a drag one pixel at a time is not undo.
+
+  var HISTORY_LIMIT = 100;
+  var COALESCE_MS = 600;
+
+  var history = { past: [], future: [], current: null, at: 0 };
+  var restoring = false;
+
+  function snapshot() {
+    return JSON.stringify({ route: routeDocument(), selected: state.selected });
+  }
+
+  /**
+   * Called after every refresh. Records a step only when something actually changed.
+   *
+   * @param continuous true for a drag or a keystroke in a number field, which arrive as a
+   *                   burst of changes a frame apart and are one edit to a person. Discrete
+   *                   commands -- a button, a delete, a reorder -- always get their own step,
+   *                   however fast they are clicked.
+   */
+  function recordHistory(continuous) {
+    if (restoring) {
+      return;
+    }
+    var next = snapshot();
+    if (history.current === null) {
+      history.current = next;
+      updateHistoryButtons();
+      return;
+    }
+    if (next === history.current) {
+      return;
+    }
+
+    var now = Date.now();
+    // Within the window the previous state is already on the stack, so the burst keeps
+    // extending the same step instead of filling the stack with frames of a drag.
+    if (!continuous || now - history.at > COALESCE_MS) {
+      history.past.push(history.current);
+      if (history.past.length > HISTORY_LIMIT) {
+        history.past.shift();
+      }
+    }
+    history.at = now;
+    history.current = next;
+    history.future = [];
+    updateHistoryButtons();
+  }
+
+  function undo() {
+    if (!history.past.length) return;
+    history.future.push(history.current);
+    history.current = history.past.pop();
+    applySnapshot(history.current);
+  }
+
+  function redo() {
+    if (!history.future.length) return;
+    history.past.push(history.current);
+    history.current = history.future.pop();
+    applySnapshot(history.current);
+  }
+
+  function applySnapshot(text) {
+    var parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (error) {
+      return;
+    }
+    restoring = true;
+    try {
+      applyRoute(parsed.route, true);
+      state.selected = typeof parsed.selected === 'number'
+        ? Math.min(parsed.selected, state.steps.length - 1) : -1;
+      refresh();
+    } finally {
+      restoring = false;
+    }
+    // Deliberately after the flag is cleared and without recording: the stacks are already
+    // where they should be, and only the buttons need to catch up.
+    history.at = 0;
+    updateHistoryButtons();
+  }
+
+  /** Forgets everything so far. The state the page opens on is not an edit to undo. */
+  function resetHistory() {
+    history.past = [];
+    history.future = [];
+    history.current = snapshot();
+    history.at = 0;
+    updateHistoryButtons();
+  }
+
+  function isTextField(element) {
+    return !!element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA');
+  }
+
+  function updateHistoryButtons() {
+    document.getElementById('undo').disabled = history.past.length === 0;
+    document.getElementById('redo').disabled = history.future.length === 0;
+  }
+
+  // ---------------------------------------------------------------- save and load
+  //
+  // A route is worth keeping: it is the shape of an auto, arrived at by dragging, and it
+  // should survive a closed tab and travel between the laptop that planned it and the one at
+  // the competition. So it saves as a small JSON file you can keep next to the OpMode it
+  // belongs to, or commit alongside the code.
+  //
+  // Inches, degrees and seconds, whichever unit the page is showing -- the same choice the
+  // Java export makes, and for the same reason: the library works in inches, so a file that
+  // quietly held centimetres would be a trap.
+
+  var ROUTE_FORMAT = 'tread-route';
+  var ROUTE_VERSION = 1;
+
+  function routeDocument() {
+    var steps = [];
+    for (var i = 0; i < state.steps.length; i++) {
+      var step = state.steps[i];
+      if (step.type === 'waypoint') {
+        var saved = {
+          type: 'waypoint',
+          x: round2(step.x),
+          y: round2(step.y),
+          heading: round2(step.heading / DEG)
+        };
+        // Only what was actually chosen: a file full of defaults is harder to read and
+        // harder to hand-edit.
+        if (step.tangentScale && Math.abs(step.tangentScale - TM.DEFAULT_TANGENT_SCALE) > 1e-9) {
+          saved.tangentScale = round2(step.tangentScale);
+        }
+        if (step.maxSpeed > 0) {
+          saved.maxSpeed = round2(step.maxSpeed);
+        }
+        if (step.nose && step.nose.tangent === false) {
+          saved.nose = round2(step.nose.heading / DEG);
+        }
+        steps.push(saved);
+      } else if (step.type === 'turn') {
+        steps.push({ type: 'turn', heading: round2(step.heading / DEG) });
+      } else if (step.type === 'hold' || step.type === 'wait') {
+        steps.push({ type: step.type, seconds: round2(step.seconds) });
+      } else if (step.type === 'reverse') {
+        steps.push({ type: 'reverse', value: !!step.value });
+      }
+    }
+
+    return {
+      format: ROUTE_FORMAT,
+      version: ROUTE_VERSION,
+      units: 'inches, degrees, seconds',
+      drive: drive,
+      start: {
+        x: round2(state.start.x),
+        y: round2(state.start.y),
+        heading: round2(state.start.heading / DEG)
+      },
+      // The limits and the dimensions ride along, because the same waypoints under different
+      // limits are a different auto, and loading a route that drew a profile you never saw
+      // would be worse than not saving them at all.
+      limits: {
+        maxVelocity: num('maxVel', 40),
+        maxWheelVelocity: num('maxWheel', 50),
+        maxAcceleration: num('maxAcc', 50),
+        maxDeceleration: num('maxDec', 45),
+        maxCentripetalAcceleration: num('maxCent', 40),
+        maxAngularVelocity: num('maxOmega', 170)
+      },
+      robot: {
+        length: num('robotLength', 17),
+        width: num('robotWidth', 16),
+        trackWidth: num('trackWidth', 14),
+        turnRadius: num('turnRadius', 13),
+        lateralMultiplier: num('lateralMult', 1.15)
+      },
+      steps: steps
+    };
+  }
+
+  function round2(value) {
+    return Math.round(value * 100) / 100;
+  }
+
+  function saveRoute() {
+    var text = JSON.stringify(routeDocument(), null, 2) + '\n';
+    var url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'tread-route.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    // Revoked on a timer rather than immediately: some browsers have not finished reading the
+    // blob when click() returns.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+    routeState(state.steps.length + ' step' + (state.steps.length === 1 ? '' : 's') + ' saved');
+  }
+
+  /** @return the step, or null if the file held something this page cannot use */
+  function readStep(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (raw.type === 'waypoint') {
+      if (!finite(raw.x) || !finite(raw.y) || !finite(raw.heading)) return null;
+      return {
+        type: 'waypoint',
+        x: raw.x,
+        y: raw.y,
+        heading: raw.heading * DEG,
+        tangentScale: finite(raw.tangentScale) && raw.tangentScale > 0
+          ? raw.tangentScale : TM.DEFAULT_TANGENT_SCALE,
+        maxSpeed: finite(raw.maxSpeed) && raw.maxSpeed > 0 ? raw.maxSpeed : 0,
+        nose: finite(raw.nose) ? { tangent: false, heading: raw.nose * DEG } : null
+      };
+    }
+    if (raw.type === 'turn') {
+      return finite(raw.heading) ? { type: 'turn', heading: raw.heading * DEG } : null;
+    }
+    if (raw.type === 'hold' || raw.type === 'wait') {
+      return finite(raw.seconds) ? { type: raw.type, seconds: Math.max(raw.seconds, 0) } : null;
+    }
+    if (raw.type === 'reverse') {
+      return { type: 'reverse', value: !!raw.value };
+    }
+    return null;
+  }
+
+  function finite(value) {
+    return typeof value === 'number' && isFinite(value);
+  }
+
+  /** @param quiet true when this is an undo rather than somebody opening a file */
+  function applyRoute(document_, quiet) {
+    if (!document_ || document_.format !== ROUTE_FORMAT || !(document_.steps instanceof Array)) {
+      routeState('not a Tread route file');
+      return;
+    }
+
+    var steps = [];
+    var skipped = 0;
+    for (var i = 0; i < document_.steps.length; i++) {
+      var step = readStep(document_.steps[i]);
+      if (step) {
+        steps.push(step);
+      } else {
+        skipped++;
+      }
+    }
+
+    // A file knows which drivetrain it was drawn for, and switching to match is the only
+    // reading that does not silently change what the route means.
+    if (document_.drive === 'mecanum' || document_.drive === 'tank') {
+      if (document_.drive !== drive) {
+        setDrive(document_.drive);
+      }
+    }
+
+    var start = document_.start;
+    if (start && finite(start.x) && finite(start.y) && finite(start.heading)) {
+      setNumber('startX', start.x);
+      setNumber('startY', start.y);
+      setNumber('startH', start.heading);
+    }
+    applySaved(document_.limits, {
+      maxVelocity: 'maxVel', maxWheelVelocity: 'maxWheel', maxAcceleration: 'maxAcc',
+      maxDeceleration: 'maxDec', maxCentripetalAcceleration: 'maxCent'
+    });
+    applySaved(document_.robot, {
+      length: 'robotLength', width: 'robotWidth', trackWidth: 'trackWidth',
+      turnRadius: 'turnRadius', lateralMultiplier: 'lateralMult'
+    });
+    applySaved(document_.limits, { maxAngularVelocity: 'maxOmega' });
+
+    state.steps = steps;
+    state.selected = steps.length ? 0 : -1;
+    state.scrub = 0;
+    refresh();
+    if (!quiet) {
+      routeState(steps.length + ' step' + (steps.length === 1 ? '' : 's') + ' loaded'
+        + (skipped ? ', ' + skipped + ' unreadable' : ''));
+    }
+  }
+
+  function applySaved(source, fields) {
+    if (!source) return;
+    for (var key in fields) {
+      if (fields.hasOwnProperty(key) && finite(source[key])) {
+        setNumber(fields[key], source[key]);
+      }
+    }
+  }
+
+  function readRouteFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch (error) {
+        routeState('that file is not JSON');
+        return;
+      }
+      applyRoute(parsed);
+    };
+    reader.onerror = function () { routeState('could not read that file'); };
+    reader.readAsText(file);
+  }
+
+  function routeState(message) {
+    var label = document.getElementById('routeState');
+    label.textContent = message;
+    setTimeout(function () {
+      if (label.textContent === message) label.textContent = '';
+    }, 4000);
+  }
+
+  // ---------------------------------------------------------------- export
+
+  function renderExport() {
+    if (isMecanum()) {
+      renderHolonomicExport();
+      return;
+    }
+    var lines = [];
+    lines.push('follower.setPose(new Pose(' + fmt(state.start.x) + ', ' + fmt(state.start.y)
+      + ', Math.toRadians(' + fmt(state.start.heading / DEG) + ')));');
+    lines.push('');
+    lines.push('Route route = follower.route()');
+
+    state.steps.forEach(function (step) {
+      if (step.type === 'waypoint') {
+        // A capped waypoint has to spell out its tangent scale too, because the cap is the
+        // third argument of the same call.
+        var scale = step.tangentScale || TM.DEFAULT_TANGENT_SCALE;
+        var extra = '';
+        if (step.maxSpeed > 0) {
+          extra = ', ' + fmt(scale) + ', ' + fmt(step.maxSpeed);
+        } else if (Math.abs(scale - TM.DEFAULT_TANGENT_SCALE) > 1e-6) {
+          extra = ', ' + fmt(scale);
+        }
+        lines.push('        .splineTo(new Pose(' + fmt(step.x) + ', ' + fmt(step.y)
+          + ', Math.toRadians(' + fmt(step.heading / DEG) + '))' + extra + ')');
+      } else if (step.type === 'turn') {
+        lines.push('        .turnToDegrees(' + fmt(step.heading / DEG) + ')');
+      } else if (step.type === 'hold') {
+        lines.push('        .stopAndHold(' + fmt(step.seconds) + ')');
+      } else if (step.type === 'wait') {
+        lines.push('        .waitSeconds(' + fmt(step.seconds) + ')');
+      } else if (step.type === 'reverse') {
+        lines.push(step.value ? '        .reversed()' : '        .forward()');
+      }
+    });
+    lines.push('        .build();');
+
+    document.getElementById('export').value = lines.join('\n');
+  }
+
+  /**
+   * The holonomic experiment's builder rather than RouteBuilder.
+   *
+   * <p>Emitted with the branch it lives on named in a comment, because pasting this into a
+   * team's OpMode against the released library would not compile, and a planner that hands
+   * you code that does not build is worse than one that hands you nothing.
+   */
+  function renderHolonomicExport() {
+    var lines = [];
+    lines.push('// Holonomic: experimental/org/treadpathing/holonomic, branch mecanum-experiment.');
+    lines.push('// Not part of a release. See experimental/README.md.');
+    lines.push('');
+    lines.push('MecanumKinematics kinematics = new MecanumKinematics()');
+    lines.push('        .turnRadius(' + fmt(num('turnRadius', 13)) + ')');
+    lines.push('        .lateralMultiplier(' + fmt(num('lateralMult', 1.15)) + ');');
+    lines.push('');
+    lines.push('HolonomicConstraints limits = new HolonomicConstraints()');
+    lines.push('        .maxVelocity(' + fmt(num('maxVel', 40)) + ')');
+    lines.push('        .maxAcceleration(' + fmt(num('maxAcc', 50)) + ')');
+    lines.push('        .maxDeceleration(' + fmt(num('maxDec', 45)) + ')');
+    lines.push('        .maxCentripetalAcceleration(' + fmt(num('maxCent', 40)) + ')');
+    lines.push('        .maxWheelVelocity(' + fmt(num('maxWheel', 50)) + ')');
+    lines.push('        .maxAngularVelocity(Math.toRadians(' + fmt(num('maxOmega', 170)) + '));');
+    lines.push('');
+    lines.push('HolonomicRoute route = HolonomicRoute.builder(');
+    lines.push('                new Pose(' + fmt(state.start.x) + ', ' + fmt(state.start.y)
+      + ', Math.toRadians(' + fmt(state.start.heading / DEG) + ')), limits, kinematics)');
+
+    var noseMode = null;
+    state.steps.forEach(function (step) {
+      if (step.type === 'waypoint') {
+        var nose = noseOf(step);
+        // Only emit a plan change where the plan actually changes, the way a person would
+        // write it by hand.
+        var wanted = nose.tangent ? 'tangent' : ('face:' + fmt(nose.heading / DEG));
+        if (wanted !== noseMode) {
+          lines.push(nose.tangent
+            ? '        .faceTangent()'
+            : '        .faceAngle(Math.toRadians(' + fmt(nose.heading / DEG) + '))');
+          noseMode = wanted;
+        }
+        lines.push('        .to(' + fmt(step.x) + ', ' + fmt(step.y)
+          + ', Math.toRadians(' + fmt(step.heading / DEG) + '))');
+      } else if (step.type === 'hold' || step.type === 'wait') {
+        lines.push('        .holdFor(' + fmt(step.seconds) + ')');
+        noseMode = null;
+      } else if (step.type === 'turn') {
+        // Not a change of heading plan: a plan says what the nose does while travelling, and
+        // this is what it does when there is nowhere to travel.
+        lines.push('        .turnTo(Math.toRadians(' + fmt(step.heading / DEG) + '))');
+        noseMode = null;
+      }
+      // A reverse step has no holonomic counterpart, so it emits nothing at all.
+    });
+    lines.push('        .build();');
+
+    document.getElementById('export').value = lines.join('\n');
+  }
+
+  function fmt(value) {
+    var rounded = Math.round(value * 100) / 100;
+    return rounded.toFixed(Math.abs(rounded % 1) < 1e-9 ? 1 : 2);
+  }
+
+  // ---------------------------------------------------------------- interaction
+
+  var drag = null;
+
+  // Set while the pointer is over the robot, or while it is being dragged.
+  var robotHot = false;
+
+  field.addEventListener('pointerdown', function (event) {
+    var rect = field.getBoundingClientRect();
+    var point = toField(event.clientX - rect.left, event.clientY - rect.top);
+
+    var hit = findHandle(point);
+    if (hit) {
+      drag = hit;
+      state.selected = hit.index;
+      field.setPointerCapture(event.pointerId);
+      refresh();
+      return;
+    }
+
+    // The nose sits about where the footprint ends, so it has to be tested before the body
+    // or it would never be reachable.
+    if (robotIsHandle() && hitStartNose(point)) {
+      drag = { kind: 'startNose' };
+      robotHot = true;
+      field.style.cursor = 'grabbing';
+      field.setPointerCapture(event.pointerId);
+      refresh(true);
+      return;
+    }
+
+    // Waypoint handles win over the robot: they are small, deliberate targets, and the
+    // footprint is large enough to sit on top of one.
+    if (robotIsHandle() && hitRobot(point, state.start)) {
+      drag = { kind: 'start' };
+      robotHot = true;
+      field.style.cursor = 'grabbing';
+      field.setPointerCapture(event.pointerId);
+      refresh(true);
+      return;
+    }
+
+    // Empty space: append a waypoint, aimed along the direction of approach so a click-click
+    // -click route comes out sensible without touching a single heading field.
+    var previous = lastPose();
+    var heading = Math.atan2(point.y - previous.y, point.x - previous.x);
+    state.steps.push({ type: 'waypoint', x: round(point.x), y: round(point.y),
+                       heading: heading, tangentScale: TM.DEFAULT_TANGENT_SCALE });
+    state.selected = state.steps.length - 1;
+    refresh();
+  });
+
+  field.addEventListener('pointermove', function (event) {
+    var rect = field.getBoundingClientRect();
+    var point = toField(event.clientX - rect.left, event.clientY - rect.top);
+
+    if (drag && drag.kind === 'start') {
+      // refresh() rebuilds state.start from these fields, so the inputs are the source of
+      // truth and writing state.start directly would be undone on the next refresh.
+      setNumber('startX', TM.clamp(point.x, 0, FIELD));
+      setNumber('startY', TM.clamp(point.y, 0, FIELD));
+      refresh(true);
+      return;
+    }
+
+    if (drag && drag.kind === 'startNose') {
+      var aim = Math.atan2(point.y - state.start.y, point.x - state.start.x);
+      document.getElementById('startH').value = String(round(aim / DEG));
+      refresh(true);
+      return;
+    }
+
+    if (!drag) {
+      var over = robotIsHandle() && (hitStartNose(point) || hitRobot(point, state.start));
+      field.style.cursor = over ? 'grab' : 'crosshair';
+      if (over !== robotHot) {
+        robotHot = over;
+        draw();
+      }
+      return;
+    }
+
+    var step = state.steps[drag.index];
+    if (!step) return;
+
+    if (drag.kind === 'body') {
+      step.x = round(TM.clamp(point.x, 0, FIELD));
+      step.y = round(TM.clamp(point.y, 0, FIELD));
+    } else {
+      step.heading = Math.atan2(point.y - step.y, point.x - step.x);
+    }
+    refresh(true);
+  });
+
+  field.addEventListener('pointerup', function () {
+    if (drag && (drag.kind === 'start' || drag.kind === 'startNose')) {
+      field.style.cursor = 'grab';
+    }
+    drag = null;
+    refresh();
+  });
+  field.addEventListener('pointercancel', function () {
+    drag = null;
+    field.style.cursor = 'crosshair';
+  });
+  field.addEventListener('pointerleave', function () {
+    if (drag) return;
+    field.style.cursor = 'crosshair';
+    if (robotHot) { robotHot = false; draw(); }
+  });
+
+  function round(value) {
+    return Math.round(value * 4) / 4;
+  }
+
+  function findHandle(point) {
+    var tolerance = 6 / view.scale;
+    for (var i = state.steps.length - 1; i >= 0; i--) {
+      var step = state.steps[i];
+      if (step.type !== 'waypoint') continue;
+      // The nose handle is drawn 9 field-inches out from the waypoint.
+      var noseDistance = 9;
+      var nx = step.x + Math.cos(step.heading) * noseDistance;
+      var ny = step.y + Math.sin(step.heading) * noseDistance;
+      if (Math.hypot(point.x - nx, point.y - ny) < tolerance) {
+        return { index: i, kind: 'nose' };
+      }
+      if (Math.hypot(point.x - step.x, point.y - step.y) < tolerance) {
+        return { index: i, kind: 'body' };
+      }
+    }
+    return null;
+  }
+
+  function lastPose() {
+    for (var i = state.steps.length - 1; i >= 0; i--) {
+      if (state.steps[i].type === 'waypoint') return state.steps[i];
+    }
+    return state.start;
+  }
+
+  // ---------------------------------------------------------------- datalog
+
+  function parseLog(text) {
+    var lines = text.split(/\r?\n/).filter(function (line) { return line.trim().length; });
+    if (lines.length < 2) return null;
+    var headers = lines[0].split(',').map(function (h) { return h.trim(); });
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var parts = lines[i].split(',');
+      if (parts.length < headers.length) continue;
+      var row = {};
+      for (var c = 0; c < headers.length; c++) {
+        row[headers[c]] = parseFloat(parts[c]);
+      }
+      rows.push(row);
+    }
+    return { headers: headers, rows: rows };
+  }
+
+  function applyLog(parsed) {
+    var readout = document.getElementById('logReadout');
+    if (!parsed) {
+      readout.innerHTML = '<tr><td class="bad">could not parse that file</td><td></td></tr>';
+      return;
+    }
+    var rows = [];
+    state.log = { actual: null };
+
+    if (parsed.headers.indexOf('x') >= 0 && parsed.headers.indexOf('y') >= 0) {
+      state.log.actual = parsed.rows.filter(function (r) {
+        return isFinite(r.x) && isFinite(r.y);
+      }).map(function (r) { return { x: r.x, y: r.y }; });
+
+      var worstCross = 0, sumSquares = 0, n = 0;
+      parsed.rows.forEach(function (r) {
+        if (!isFinite(r.crossTrack)) return;
+        worstCross = Math.max(worstCross, Math.abs(r.crossTrack));
+        sumSquares += r.crossTrack * r.crossTrack;
+        n++;
+      });
+      rows.push(['samples', String(parsed.rows.length), '']);
+      if (n) {
+        rows.push(['worst cross-track', worstCross.toFixed(2) + ' in',
+                   worstCross > 2 ? 'warn' : '']);
+        rows.push(['rms cross-track', Math.sqrt(sumSquares / n).toFixed(2) + ' in', '']);
+      }
+      var hz = parsed.rows.filter(function (r) { return isFinite(r.loopHz); });
+      if (hz.length) {
+        var slowest = hz.reduce(function (min, r) { return Math.min(min, r.loopHz); }, 1e9);
+        rows.push(['slowest loop', slowest.toFixed(0) + ' Hz', slowest < 40 ? 'warn' : '']);
+      }
+    }
+
+    if (parsed.headers.indexOf('power') >= 0) {
+      var velocityKey = parsed.headers.indexOf('avgVel') >= 0 ? 'avgVel' : 'velocity';
+      var fit = TM.fitFeedforward(parsed.rows.map(function (r) {
+        return { power: r.power, velocity: r[velocityKey] };
+      }));
+      if (fit) {
+        rows.push(['&mdash;', '', '']);
+        rows.push(['.feedforward kS', fit.kS.toFixed(4), '']);
+        rows.push(['.feedforward kV', fit.kV.toFixed(5), '']);
+        rows.push(['fit quality (r&sup2;)', fit.r2.toFixed(3), fit.r2 < 0.95 ? 'warn' : '']);
+        rows.push(['samples used', String(fit.samples), '']);
+      } else {
+        rows.push(['feedforward fit', 'not enough moving samples', 'warn']);
+      }
+    }
+
+    if (!rows.length) {
+      rows.push(['unrecognised log', parsed.headers.join(' '), 'warn']);
+    }
+
+    readout.innerHTML = rows.map(function (row) {
+      return '<tr><td>' + row[0] + '</td><td class="' + row[2] + '">' + row[1] + '</td></tr>';
+    }).join('');
+    refresh();
+  }
+
+  var drop = document.getElementById('drop');
+  ['dragenter', 'dragover'].forEach(function (name) {
+    drop.addEventListener(name, function (event) {
+      event.preventDefault();
+      drop.classList.add('over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (name) {
+    drop.addEventListener(name, function (event) {
+      event.preventDefault();
+      drop.classList.remove('over');
+    });
+  });
+  drop.addEventListener('drop', function (event) {
+    var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  document.getElementById('pickFile').addEventListener('click', function () {
+    document.getElementById('fileInput').click();
+  });
+  document.getElementById('fileInput').addEventListener('change', function (event) {
+    if (event.target.files && event.target.files[0]) readFile(event.target.files[0]);
+  });
+  document.getElementById('clearLog').addEventListener('click', function () {
+    state.log = null;
+    document.getElementById('logReadout').innerHTML = '';
+    refresh();
+  });
+
+  function readFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () { applyLog(parseLog(String(reader.result))); };
+    reader.readAsText(file);
+  }
+
+  // ---------------------------------------------------------------- tabs
+
+  var TAB_STORE = 'tread.tab';
+
+  function showTab(name) {
+    var buttons = document.getElementById('tabs').getElementsByTagName('button');
+    for (var i = 0; i < buttons.length; i++) {
+      var on = buttons[i].getAttribute('data-tab') === name;
+      buttons[i].className = on ? 'on' : '';
+      var pane = document.getElementById('tab-' + buttons[i].getAttribute('data-tab'));
+      pane.className = on ? 'tab-pane on' : 'tab-pane';
+    }
+    try {
+      window.localStorage.setItem(TAB_STORE, name);
+    } catch (err) {
+      // Remembering the tab is a convenience, not worth failing the page over.
+    }
+  }
+
+  (function wireTabs() {
+    var buttons = document.getElementById('tabs').getElementsByTagName('button');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function (event) {
+        showTab(event.currentTarget.getAttribute('data-tab'));
+      });
+    }
+    var saved = null;
+    try {
+      saved = window.localStorage.getItem(TAB_STORE);
+    } catch (err) {
+      saved = null;
+    }
+    if (saved && saved !== 'start' && document.getElementById('tab-' + saved)) {
+      showTab(saved);
+    }
+  }());
+
+  // ---------------------------------------------------------------- field image
+
+  function fieldNote(message) {
+    document.getElementById('fieldNote').textContent = message;
+  }
+
+  function applyFieldImage(url, onFail) {
+    if (!url) {
+      fieldImage.url = null;
+      fieldImage.image = null;
+      fieldImage.ready = false;
+      draw();
+      return;
+    }
+    // The url is the source of truth and is set synchronously: decoding is asynchronous, and
+    // a caller that persists straight after this returns must not see a half-applied image.
+    fieldImage.url = url;
+    var image = new Image();
+    image.onload = function () {
+      fieldImage.image = image;
+      fieldImage.ready = true;
+      draw();
+    };
+    image.onerror = function () {
+      fieldImage.url = null;
+      fieldImage.image = null;
+      fieldImage.ready = false;
+      storeFieldImage();
+      draw();
+      if (onFail) onFail();
+    };
+    image.src = url;
+  }
+
+  function storeFieldImage() {
+    // A field render is often a megabyte or more once base64'd, and localStorage is a few.
+    // Failing to remember it is a nuisance; failing to draw it would be a bug, so the draw
+    // happens either way and only the persistence is allowed to fall over.
+    //
+    // The bundled field is remembered as a *choice*, never as bytes. Storing its bytes is
+    // what made a planner that shipped a new field keep showing the old one for ever: the
+    // page had a new default and the browser had last season's copy of the old one, and the
+    // browser won. It also wasted a sixth of the storage budget on something the page is
+    // already carrying.
+    var source = 'none';
+    if (fieldImage.url) {
+      source = fieldImage.url === DEFAULT_FIELD ? 'bundled' : 'custom';
+    }
+    try {
+      window.localStorage.setItem(FIELD_STORE, JSON.stringify({
+        source: source,
+        url: source === 'custom' ? fieldImage.url : null,
+        rotation: fieldImage.rotation,
+        opacity: fieldImage.opacity,
+        grid: showGrid
+      }));
+    } catch (err) {
+      fieldNote('Image is in use, but too large for this browser to remember between visits.');
+    }
+  }
+
+  function setGrid(on) {
+    showGrid = !!on;
+    document.getElementById('gridToggle').textContent = 'grid: ' + (showGrid ? 'on' : 'off');
+    draw();
+  }
+
+  function showOpacity() {
+    var percent = Math.round(fieldImage.opacity * 100);
+    document.getElementById('fieldOpacity').value = String(percent);
+    document.getElementById('fieldOpacityValue').textContent = percent + '%';
+  }
+
+  function restoreFieldImage() {
+    var saved = null;
+    try {
+      saved = JSON.parse(window.localStorage.getItem(FIELD_STORE) || 'null');
+    } catch (err) {
+      saved = null;
+    }
+    // No entry at all means nobody has chosen yet, so the bundled field is the starting
+    // point. An entry saying 'none' means someone asked for no image, and that has to
+    // survive a reload rather than being helpfully undone.
+    if (!saved) {
+      useDefaultField(false);
+      return;
+    }
+    setGrid(saved.grid !== false);
+    fieldImage.rotation = saved.rotation || 0;
+    fieldImage.opacity = typeof saved.opacity === 'number'
+      ? saved.opacity : DEFAULT_FIELD_OPACITY;
+    showOpacity();
+
+    // Entries written before the bundled field was stored as a choice carry its bytes in
+    // `url` with no `source`. Those are indistinguishable from an image somebody dropped, so
+    // they are treated as custom and kept: guessing wrong there would throw away a team's own
+    // field render, which is worse than showing them last season's default until they press
+    // the button.
+    var source = saved.source;
+    if (!source) {
+      source = saved.url ? 'custom' : 'none';
+    }
+    if (source === 'bundled') {
+      useDefaultField(false);
+      return;
+    }
+    if (source === 'none' || !saved.url) {
+      return;
+    }
+    applyFieldImage(saved.url, function () {
+      fieldNote('The remembered image could not be decoded. Drop a new one.');
+    });
+  }
+
+  function useDefaultField(persist) {
+    if (!DEFAULT_FIELD) {
+      fieldNote('This build has no bundled field image. Drop your own.');
+      return;
+    }
+    // Pressing the button is a reset; restoring a remembered choice is not, so only the
+    // button throws away the rotation and opacity that went with it.
+    if (persist) {
+      fieldImage.rotation = 0;
+      fieldImage.opacity = DEFAULT_FIELD_OPACITY;
+      showOpacity();
+    }
+    applyFieldImage(DEFAULT_FIELD, function () {
+      fieldNote('The bundled field image failed to decode.');
+    });
+    if (persist) storeFieldImage();
+  }
+
+  function readImageFile(file) {
+    if (!file || file.type.indexOf('image/') !== 0) {
+      fieldNote('That is not an image. Drop a .png or .jpg of the field.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      applyFieldImage(String(reader.result), function () {
+        fieldNote('That file did not decode as an image.');
+      });
+      storeFieldImage();
+      fieldNote(file.name + ' \u2014 rotate until the tile seams line up with the grid.');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  var fieldDrop = document.getElementById('fieldDrop');
+  ['dragenter', 'dragover'].forEach(function (name) {
+    fieldDrop.addEventListener(name, function (event) {
+      event.preventDefault();
+      fieldDrop.classList.add('over');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (name) {
+    fieldDrop.addEventListener(name, function (event) {
+      event.preventDefault();
+      fieldDrop.classList.remove('over');
+    });
+  });
+  fieldDrop.addEventListener('drop', function (event) {
+    var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) readImageFile(file);
+  });
+
+  document.getElementById('pickField').addEventListener('click', function () {
+    document.getElementById('fieldInput').click();
+  });
+  document.getElementById('fieldInput').addEventListener('change', function (event) {
+    if (event.target.files && event.target.files[0]) readImageFile(event.target.files[0]);
+  });
+  document.getElementById('fieldOpacity').addEventListener('input', function (event) {
+    fieldImage.opacity = parseInt(event.target.value, 10) / 100;
+    document.getElementById('fieldOpacityValue').textContent = event.target.value + '%';
+    draw();
+    storeFieldImage();
+  });
+  document.getElementById('gridToggle').addEventListener('click', function () {
+    setGrid(!showGrid);
+    storeFieldImage();
+  });
+  document.getElementById('rotateField').addEventListener('click', function () {
+    fieldImage.rotation = (fieldImage.rotation + 90) % 360;
+    draw();
+    storeFieldImage();
+  });
+  document.getElementById('resetField').addEventListener('click', function () {
+    useDefaultField(true);
+    fieldNote('Bundled BioBuzz field. Rotate until the tile seams line up with the grid.');
+  });
+  document.getElementById('clearField').addEventListener('click', function () {
+    fieldImage.rotation = 0;
+    applyFieldImage(null);
+    storeFieldImage();
+    fieldNote('No field image \u2014 planning on the bare tile grid.');
+  });
+
+  // ---------------------------------------------------------------- chrome
+
+  document.getElementById('addTurn').addEventListener('click', function () {
+    var pose = lastPose();
+    state.steps.push({ type: 'turn', heading: pose.heading });
+    state.selected = state.steps.length - 1;
+    refresh();
+  });
+  document.getElementById('addHold').addEventListener('click', function () {
+    state.steps.push({ type: 'hold', seconds: 1.5 });
+    state.selected = state.steps.length - 1;
+    refresh();
+  });
+  document.getElementById('addWait').addEventListener('click', function () {
+    state.steps.push({ type: 'wait', seconds: 0.5 });
+    state.selected = state.steps.length - 1;
+    refresh();
+  });
+  document.getElementById('toggleReverse').addEventListener('click', function () {
+    var reversed = false;
+    state.steps.forEach(function (step) {
+      if (step.type === 'reverse') reversed = step.value;
+    });
+    state.steps.push({ type: 'reverse', value: !reversed });
+    state.selected = state.steps.length - 1;
+    refresh();
+  });
+  document.getElementById('clearRoute').addEventListener('click', function () {
+    state.steps = [];
+    state.selected = -1;
+    refresh();
+  });
+  document.getElementById('loadExample').addEventListener('click', loadExample);
+
+  document.getElementById('undo').innerHTML = ICON_UNDO;
+  document.getElementById('redo').innerHTML = ICON_REDO;
+  document.getElementById('undo').addEventListener('click', undo);
+  document.getElementById('redo').addEventListener('click', redo);
+
+  document.addEventListener('keydown', function (event) {
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') {
+      // Ctrl+Y is the other redo people have in their fingers, from Windows.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+      }
+      return;
+    }
+    // Inside a text field the browser's own undo is the one you want: it puts back the
+    // characters you just typed, which is a smaller and more obvious thing than putting back
+    // the whole route. Checked on the event's target as well as the focused element, because
+    // the two disagree often enough to matter and either one being a field is enough.
+    if (isTextField(document.activeElement) || isTextField(event.target)) {
+      return;
+    }
+    event.preventDefault();
+    if (event.shiftKey) {
+      redo();
+    } else {
+      undo();
+    }
+  });
+
+  document.getElementById('saveRoute').addEventListener('click', saveRoute);
+  document.getElementById('loadRoute').addEventListener('click', function () {
+    document.getElementById('routeInput').click();
+  });
+  document.getElementById('routeInput').addEventListener('change', function (event) {
+    if (event.target.files && event.target.files[0]) readRouteFile(event.target.files[0]);
+    // Cleared so choosing the same file twice in a row still fires a change.
+    event.target.value = '';
+  });
+
+  document.getElementById('copyJava').addEventListener('click', function () {
+    var area = document.getElementById('export');
+    area.select();
+    var state2 = document.getElementById('copyState');
+    try {
+      document.execCommand('copy');
+      state2.textContent = 'copied';
+    } catch (error) {
+      state2.textContent = 'select and copy manually';
+    }
+    setTimeout(function () { state2.textContent = ''; }, 1800);
+  });
+
+  document.getElementById('driveTank').addEventListener('click', function () {
+    setDrive('tank');
+  });
+  document.getElementById('driveMecanum').addEventListener('click', function () {
+    setDrive('mecanum');
+  });
+
+  document.getElementById('unitToggle').addEventListener('click', function () {
+    setMetric(!metric);
+  });
+
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    var root = document.documentElement;
+    var current = root.getAttribute('data-theme');
+    var dark = current ? current === 'dark'
+      : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    refresh();
+  });
+
+  ['startX', 'startY', 'startH', 'maxVel', 'maxAcc', 'maxDec', 'maxCent', 'maxWheel',
+   'trackWidth', 'robotLength', 'robotWidth', 'turnRadius', 'lateralMult',
+   'maxOmega'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () { refresh(); });
+  });
+
+  // ---------------------------------------------------------------- transport
+
+  var playing = false;
+  var lastFrame = 0;
+
+  function setScrub(seconds) {
+    if (!built) return;
+    state.scrub = TM.clamp(seconds, 0, built.totalTime);
+    var fraction = built.totalTime > 1e-6 ? state.scrub / built.totalTime : 0;
+    document.getElementById('scrub').value = String(Math.round(fraction * 1000));
+    showTime();
+    draw();
+    renderReadout();
+  }
+
+  function showTime() {
+    var total = built ? built.totalTime : 0;
+    document.getElementById('timeLabel').textContent =
+      state.scrub.toFixed(2) + ' / ' + total.toFixed(2) + ' s';
+  }
+
+  function setPlaying(on) {
+    playing = on;
+    document.getElementById('play').innerHTML = on ? '&#10073;&#10073;' : '&#9654;';
+    if (on) {
+      lastFrame = 0;
+      window.requestAnimationFrame(step);
+    }
+  }
+
+  function step(now) {
+    if (!playing) return;
+    if (!built || built.totalTime <= 1e-6) { setPlaying(false); return; }
+    // The first frame has no previous timestamp to difference against.
+    var dt = lastFrame ? (now - lastFrame) / 1000 : 0;
+    lastFrame = now;
+    var next = state.scrub + dt;
+    if (next >= built.totalTime) {
+      setScrub(built.totalTime);
+      setPlaying(false);
+      return;
+    }
+    setScrub(next);
+    window.requestAnimationFrame(step);
+  }
+
+  document.getElementById('play').addEventListener('click', function () {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (!built || built.totalTime <= 1e-6) return;
+    // Replaying from the end is the common case, so a press there starts over rather than
+    // finishing instantly.
+    if (state.scrub >= built.totalTime - 1e-6) setScrub(0);
+    setPlaying(true);
+  });
+
+  document.getElementById('scrub').addEventListener('input', function (event) {
+    if (!built) return;
+    // Taking hold of the scrubber means you want to look at a moment, not watch it go by.
+    setPlaying(false);
+    state.scrub = built.totalTime * parseFloat(event.target.value) / 1000;
+    showTime();
+    draw();
+    renderReadout();
+  });
+
+  window.addEventListener('resize', function () {
+    fitStage();
+    draw();
+  });
+
+  // ---------------------------------------------------------------- loop
+
+  function refresh(skipStructural) {
+    state.start = {
+      x: num('startX', 9),
+      y: num('startY', 60),
+      heading: num('startH', 0) * DEG
+    };
+    built = buildRoute();
+    state.scrub = TM.clamp(state.scrub, 0, built.totalTime);
+    if (!skipStructural) {
+      renderSteps();
+      renderEditor();
+    }
+    renderExport();
+    renderReadout();
+    showTime();
+    fitStage();
+    draw();
+    // skipStructural is set by exactly the two things that stream changes: dragging on the
+    // field, and typing in a number field.
+    recordHistory(skipStructural);
+  }
+
+  function draw() {
+    drawField();
+    drawRoute();
+    var at = poseAtTime(state.scrub);
+    if (at) drawRobot(at.pose, robotHot);
+    drawProfile();
+  }
+
+  function loadExample() {
+    // Through setNumber, because these are inches and the fields may be showing centimetres.
+    setNumber('startX', 9);
+    setNumber('startY', 60);
+    document.getElementById('startH').value = '0';
+    state.steps = [
+      { type: 'waypoint', x: 34, y: 60, heading: 0, tangentScale: TM.DEFAULT_TANGENT_SCALE },
+      { type: 'waypoint', x: 52, y: 84, heading: 70 * DEG, tangentScale: TM.DEFAULT_TANGENT_SCALE },
+      { type: 'hold', seconds: 1.5 },
+      { type: 'turn', heading: 20 * DEG },
+      { type: 'reverse', value: true },
+      { type: 'waypoint', x: 20, y: 72, heading: 20 * DEG, tangentScale: TM.DEFAULT_TANGENT_SCALE },
+      { type: 'hold', seconds: 2.0 }
+    ];
+    state.selected = 0;
+    state.scrub = 0;
+    refresh();
+  }
+
+  (function restoreDrive() {
+    var saved = null;
+    try {
+      saved = window.localStorage.getItem(DRIVE_STORE);
+    } catch (err) {
+      saved = null;
+    }
+    drive = saved === 'mecanum' ? 'mecanum' : 'tank';
+    document.documentElement.setAttribute('data-drive', drive);
+    document.getElementById('driveTank').className = drive === 'tank' ? 'seg on' : 'seg';
+    document.getElementById('driveMecanum').className = drive === 'mecanum' ? 'seg on' : 'seg';
+    applyDriveWording();
+  }());
+
+  (function restoreUnits() {
+    var saved = null;
+    try {
+      saved = window.localStorage.getItem(UNIT_STORE);
+    } catch (err) {
+      saved = null;
+    }
+    // Inch values are already in the markup, so only metric needs the fields rewritten.
+    if (saved === 'cm') {
+      setMetric(true);
+    } else {
+      applyUnits();
+    }
+  }());
+
+  restoreFieldImage();
+  loadExample();
+  resetHistory();
+}());
+</script>
+
+</body>
+</html>
