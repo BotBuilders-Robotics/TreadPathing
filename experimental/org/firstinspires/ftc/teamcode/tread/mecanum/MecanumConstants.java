@@ -8,9 +8,12 @@ import org.treadpathing.holonomic.HolonomicController;
 import org.treadpathing.holonomic.HolonomicPoseHold;
 import org.treadpathing.holonomic.MecanumDrive;
 import org.treadpathing.holonomic.MecanumDriveConstants;
+import org.treadpathing.hardware.Encoder;
+import org.treadpathing.localization.HeadingFuser;
 import org.treadpathing.localization.Localizer;
 import org.treadpathing.localization.PinpointDriver;
 import org.treadpathing.localization.PinpointLocalizer;
+import org.treadpathing.localization.TwoWheelLocalizer;
 
 /**
  * The mecanum answer to the quickstart's {@code Constants}: the only file a team edits.
@@ -28,6 +31,24 @@ public final class MecanumConstants {
 
     private MecanumConstants() {
     }
+
+    /**
+     * Which odometry the robot actually has. Change this one line to switch.
+     *
+     * <p>Shorter than the tank library's list by one, and the missing entry is the cheap one:
+     * there is no {@code DRIVE_ENCODERS}. {@code DriveEncoderLocalizer} reads two sides and
+     * divides by a track width, which is differential by construction, and mecanum wheel
+     * odometry is unreliable enough that no serious library offers it -- the rollers slip in
+     * every turn and every strafe, which is exactly when the estimate matters.
+     */
+    public enum Odometry {
+        /** Two dead wheel pods plus the Control Hub IMU. */
+        TWO_WHEEL,
+        /** goBILDA Pinpoint. Same accuracy, one I2C read, least code to get wrong. */
+        PINPOINT
+    }
+
+    public static final Odometry ODOMETRY = Odometry.TWO_WHEEL;
 
     /** Dead wheel pod ticks per inch. Mecanum wheel odometry is not accurate enough to use. */
     public static final double POD_TICKS_PER_INCH = 336.0;
@@ -118,15 +139,38 @@ public final class MecanumConstants {
         return new MecanumDrive(hardwareMap, drive());
     }
 
-    /**
-     * Dead wheels or a Pinpoint, never the drive encoders.
-     *
-     * <p>{@code DriveEncoderLocalizer} is differential by construction -- it reads two sides
-     * and divides by a track width -- and mecanum wheel odometry is unreliable enough that no
-     * serious library offers it: the rollers slip in every turn and every strafe, which is
-     * exactly when you need the estimate most.
-     */
+    /** Builds whichever localizer {@link #ODOMETRY} selects. */
     public static Localizer localizer(HardwareMap hardwareMap) {
+        if (ODOMETRY == Odometry.PINPOINT) {
+            return pinpoint(hardwareMap);
+        }
+        return twoWheel(hardwareMap);
+    }
+
+    /**
+     * Two dead wheels plus the hub's IMU.
+     *
+     * <p>The IMU is read every loop rather than every fourth: two pods cannot observe rotation
+     * on their own, so unlike a tank drive there is nothing to estimate heading from in
+     * between.
+     */
+    static Localizer twoWheel(HardwareMap hardwareMap) {
+        Encoder parallel = new Encoder(hardwareMap, "parallelPod", POD_TICKS_PER_INCH, false);
+        Encoder perpendicular =
+                new Encoder(hardwareMap, "perpendicularPod", POD_TICKS_PER_INCH, false);
+
+        // The IMU orientation comes from this file's own drive constants. Before the overload
+        // this called for, HeadingFuser could only be built from a tank DriveConstants -- a
+        // class that wanted three fields taking the whole drivetrain with it.
+        MecanumDriveConstants drive = drive();
+        HeadingFuser fuser = new HeadingFuser(hardwareMap,
+                drive.getImuName(), drive.getLogoFacing(), drive.getUsbFacing(), 1);
+
+        return new TwoWheelLocalizer(parallel, perpendicular,
+                PARALLEL_POD_Y, PERPENDICULAR_POD_X, fuser);
+    }
+
+    static Localizer pinpoint(HardwareMap hardwareMap) {
         return new PinpointLocalizer(hardwareMap, "pinpoint",
                 PinpointDriver.Pod.SWINGARM,
                 PARALLEL_POD_Y,

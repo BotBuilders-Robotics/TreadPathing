@@ -200,7 +200,7 @@ rungs divide three ways.
 
 | rung | on a mecanum |
 |---|---|
-| 0 LocalizationTest | transfers — it is about the localizer, which does not care about wheels |
+| 0 LocalizationTest | **ported**, as `MecanumLocalizationTest`, with a fourth check: a strafe must go sideways, not diagonally |
 | 1 PushTest, ticks per inch | transfers, averaging four wheels rather than two sides |
 | **2 SpinTest, track width** | **does not exist.** There is no effective track width to find: you measure track and wheelbase with a tape. The unknown it is replaced by is the lateral multiplier |
 | 3 RampTest, kS and kV | **ported**, as `MecanumRampTest` |
@@ -234,9 +234,26 @@ measurement — `HolonomicConstraints` works in wheel speed and derates translat
 between travel and the nose, so measuring forwards and planning in wheel terms agree. It does
 mean the run has to be nose-first: a full-power strafe measures the rollers, not the drivetrain.
 
-That leaves rungs 0, 1, 6, 7, 8 and 9 unported. Each transfers in substance and needs the same
+That leaves rungs 1, 6, 7, 8 and 9 unported. Each transfers in substance and needs the same
 mechanical rework — a mecanum harness in place of `buildFollower` — except SquareTest and
 PoseTest, which also tune different gains because there is no Ramsete here.
+
+### Odometry, and one line of the library that had to move
+
+`MecanumConstants` now has the same `ODOMETRY` switch the tank quickstart does, minus the
+cheap option: there is no `DRIVE_ENCODERS`, because `DriveEncoderLocalizer` reads two sides and
+divides by a track width, and mecanum wheel odometry slips in exactly the manoeuvres you need
+it for. `TWO_WHEEL` is the default; `PINPOINT` is one line away.
+
+Wiring `TWO_WHEEL` needed the first change to `src/` this experiment has asked for, and it is
+a small one with a familiar shape. `TwoWheelLocalizer` needs a `HeadingFuser`, and every
+`HeadingFuser` constructor took a **`DriveConstants`** — for three fields: the IMU name and the
+two hub orientations. A mecanum has all three and no `DriveConstants`, so it could not build
+one without inventing a tank object it had no other use for.
+
+The fix is an overload taking the three fields directly. Six lines, no behaviour change, and
+the same lesson as `ChassisSpeeds` at a tenth of the size: a class that wants three fields
+should ask for three fields, or the second drivetrain cannot reuse it.
 
 ## What is missing before this is a real answer
 

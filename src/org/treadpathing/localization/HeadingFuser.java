@@ -64,9 +64,28 @@ public final class HeadingFuser {
      * @param decimation loops between IMU reads. 1 reads every loop.
      */
     public HeadingFuser(HardwareMap hardwareMap, DriveConstants constants, int decimation) {
-        this.imu = hardwareMap.get(IMU.class, constants.getImuName());
-        this.imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                constants.getLogoFacing(), constants.getUsbFacing())));
+        this(hardwareMap, constants.getImuName(), constants.getLogoFacing(),
+                constants.getUsbFacing(), decimation);
+    }
+
+    /**
+     * The same thing without a {@link DriveConstants}, for a drivetrain that does not have one.
+     *
+     * <p>All this class ever wanted from the constants was an IMU name and which way the hub
+     * is bolted down. Taking the whole object meant that anything other than a tank drive --
+     * the holonomic experiment, a swerve, a bare test OpMode -- could not reuse it without
+     * inventing a {@code DriveConstants} it had no other use for.
+     *
+     * @param imuName configuration name of the IMU
+     * @param logo    which way the REV logo faces on the hub
+     * @param usb     which way the USB ports face on the hub
+     */
+    public HeadingFuser(HardwareMap hardwareMap, String imuName,
+                        RevHubOrientationOnRobot.LogoFacingDirection logo,
+                        RevHubOrientationOnRobot.UsbFacingDirection usb,
+                        int decimation) {
+        this.imu = hardwareMap.get(IMU.class, imuName);
+        this.imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(logo, usb)));
         this.decimation = Math.max(1, decimation);
         this.countdown = 0;
     }
