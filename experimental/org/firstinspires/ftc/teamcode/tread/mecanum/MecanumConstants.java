@@ -8,6 +8,7 @@ import org.treadpathing.holonomic.HolonomicController;
 import org.treadpathing.holonomic.HolonomicPoseHold;
 import org.treadpathing.holonomic.MecanumDrive;
 import org.treadpathing.holonomic.MecanumDriveConstants;
+import org.treadpathing.holonomic.MecanumEncoderLocalizer;
 import org.treadpathing.hardware.Encoder;
 import org.treadpathing.localization.HeadingFuser;
 import org.treadpathing.localization.Localizer;
@@ -35,20 +36,26 @@ public final class MecanumConstants {
     /**
      * Which odometry the robot actually has. Change this one line to switch.
      *
-     * <p>Shorter than the tank library's list by one, and the missing entry is the cheap one:
-     * there is no {@code DRIVE_ENCODERS}. {@code DriveEncoderLocalizer} reads two sides and
-     * divides by a track width, which is differential by construction, and mecanum wheel
-     * odometry is unreliable enough that no serious library offers it -- the rollers slip in
-     * every turn and every strafe, which is exactly when the estimate matters.
+     * <p>The tank library's {@code DRIVE_ENCODERS} option does not carry over --
+     * {@code DriveEncoderLocalizer} reads two sides and divides by a track width, which is
+     * differential by construction -- so the mecanum equivalent is written from the four-wheel
+     * forward kinematics instead. It is honest bring-up odometry and nothing more: the rollers
+     * slip, so a strafing auto drifts. Move to pods or a Pinpoint before it matters.
      */
     public enum Odometry {
+        /**
+         * The four drive encoders plus the IMU. No hardware to buy or mount, and good enough
+         * to bring a robot up — but the rollers slip, so strafes drift. See
+         * {@link org.treadpathing.holonomic.MecanumEncoderLocalizer}.
+         */
+        DRIVE_ENCODERS,
         /** Two dead wheel pods plus the Control Hub IMU. */
         TWO_WHEEL,
         /** goBILDA Pinpoint. Same accuracy, one I2C read, least code to get wrong. */
         PINPOINT
     }
 
-    public static final Odometry ODOMETRY = Odometry.TWO_WHEEL;
+    public static final Odometry ODOMETRY = Odometry.DRIVE_ENCODERS;
 
     /** Dead wheel pod ticks per inch. Mecanum wheel odometry is not accurate enough to use. */
     public static final double POD_TICKS_PER_INCH = 336.0;
@@ -139,12 +146,38 @@ public final class MecanumConstants {
         return new MecanumDrive(hardwareMap, drive());
     }
 
-    /** Builds whichever localizer {@link #ODOMETRY} selects. */
-    public static Localizer localizer(HardwareMap hardwareMap) {
+    /**
+     * Builds whichever localizer {@link #ODOMETRY} selects.
+     *
+     * <p>Takes the drivetrain, because the drive-encoder option reads it. The others ignore
+     * it, which is the same bargain the tank library's {@code LocalizerFactory} makes.
+     */
+    public static Localizer localizer(HardwareMap hardwareMap, MecanumDrive drive) {
         if (ODOMETRY == Odometry.PINPOINT) {
             return pinpoint(hardwareMap);
         }
-        return twoWheel(hardwareMap);
+        if (ODOMETRY == Odometry.TWO_WHEEL) {
+            return twoWheel(hardwareMap);
+        }
+        return driveEncoders(hardwareMap, drive);
+    }
+
+    /**
+     * Pose from the four drive encoders and the IMU.
+     *
+     * <p>The IMU is read every loop. On a tank drive the wheels can estimate rotation between
+     * reads, which buys back loop time; here they cannot be trusted to, because the term that
+     * would do it is the one roller slip corrupts worst.
+     */
+    public static Localizer driveEncoders(HardwareMap hardwareMap, MecanumDrive drive) {
+        return new MecanumEncoderLocalizer(drive, headingFuser(hardwareMap, 1));
+    }
+
+    /** The IMU, oriented the way this file already says the hub is mounted. */
+    public static HeadingFuser headingFuser(HardwareMap hardwareMap, int decimation) {
+        MecanumDriveConstants drive = drive();
+        return new HeadingFuser(hardwareMap,
+                drive.getImuName(), drive.getLogoFacing(), drive.getUsbFacing(), decimation);
     }
 
     /**
@@ -154,23 +187,16 @@ public final class MecanumConstants {
      * on their own, so unlike a tank drive there is nothing to estimate heading from in
      * between.
      */
-    static Localizer twoWheel(HardwareMap hardwareMap) {
+    public static Localizer twoWheel(HardwareMap hardwareMap) {
         Encoder parallel = new Encoder(hardwareMap, "parallelPod", POD_TICKS_PER_INCH, false);
         Encoder perpendicular =
                 new Encoder(hardwareMap, "perpendicularPod", POD_TICKS_PER_INCH, false);
 
-        // The IMU orientation comes from this file's own drive constants. Before the overload
-        // this called for, HeadingFuser could only be built from a tank DriveConstants -- a
-        // class that wanted three fields taking the whole drivetrain with it.
-        MecanumDriveConstants drive = drive();
-        HeadingFuser fuser = new HeadingFuser(hardwareMap,
-                drive.getImuName(), drive.getLogoFacing(), drive.getUsbFacing(), 1);
-
         return new TwoWheelLocalizer(parallel, perpendicular,
-                PARALLEL_POD_Y, PERPENDICULAR_POD_X, fuser);
+                PARALLEL_POD_Y, PERPENDICULAR_POD_X, headingFuser(hardwareMap, 1));
     }
 
-    static Localizer pinpoint(HardwareMap hardwareMap) {
+    public static Localizer pinpoint(HardwareMap hardwareMap) {
         return new PinpointLocalizer(hardwareMap, "pinpoint",
                 PinpointDriver.Pod.SWINGARM,
                 PARALLEL_POD_Y,

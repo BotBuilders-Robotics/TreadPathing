@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import org.treadpathing.geometry.MathUtil;
 import org.treadpathing.geometry.Pose;
 import org.treadpathing.hardware.BulkReader;
-import org.treadpathing.holonomic.HeadingPlans;
 import org.treadpathing.holonomic.HolonomicController;
 import org.treadpathing.holonomic.HolonomicPoseHold;
 import org.treadpathing.holonomic.HolonomicRoute;
@@ -16,40 +15,46 @@ import org.treadpathing.holonomic.MecanumDrive;
 import org.treadpathing.localization.Localizer;
 
 /**
- * A complete mecanum autonomous, and an argument for why the experiment is not finished.
+ * An autonomous for a robot with no odometry hardware at all: four drive encoders and the hub
+ * IMU, nothing to buy and nothing to mount.
  *
- * <p>The route reads the way the tank one does, and says things a tank route cannot: strafe
- * while facing the goal, curve out while the nose swings round. That part works.
+ * <p>The pair to {@link ExampleMecanumAuto}, which names the Pinpoint and drives a route that
+ * earns it. This one names the drive-encoder localizer, and its route is deliberately
+ * different, because the odometry underneath it is worse in a specific, predictable way and a
+ * route that ignores that will disappoint.
  *
- * <p>The loop underneath does not read that way, and that is the point. On the tank side this
- * whole method is {@code follower.update()} inside a {@code while (follower.isBusy())}, because
- * {@code Follower} owns the localizer, the clock, the segment cursor and the drivetrain. There
- * is no holonomic {@code Follower}, so all of it is written out by hand here: reading the
- * localizer, timing the loop, walking the legs, sampling the trajectory, and deciding when a
- * leg is done. Nobody should have to write this to drive a route.
+ * <h3>What the route does differently, and why</h3>
  *
- * <p>Left inline deliberately rather than tidied into a helper class, because a holonomic
- * follower <b>is</b> that helper class, and the reason there is not one is in
- * {@code experimental/README.md}: every signature from the controller interface down to the
- * drivetrain is typed to a two-number chassis command.
+ * <b>It travels nose-first.</b> Forward travel is the one thing mecanum wheels measure well:
+ * the tread grips and the encoder count means what it says. A strafe is the rollers doing what
+ * they are shaped to do, and they slip by an amount that varies with the floor, the wheel wear
+ * and the weight on each corner. So the nose follows the path, exactly as a tank robot's would
+ * -- not because the drivetrain cannot strafe, but because the <i>odometry</i> cannot measure
+ * strafing honestly.
  *
- * <h3>This one needs a Pinpoint</h3>
+ * <p><b>It turns on the spot rather than while travelling.</b> Heading comes from the IMU and
+ * is trustworthy; it is the translation estimate that suffers while the wheels are doing two
+ * things at once. Turning where the robot is stationary keeps the two apart.
  *
- * The route strafes and turns while travelling, which is what drive-encoder odometry measures
- * worst, so it names the Pinpoint localizer directly. {@link NoPodsAuto} is the same idea for
- * a robot with no odometry hardware at all, and its route is shaped around what that odometry
- * can actually see.
+ * <p><b>It holds at the points that matter.</b> Every pose hold is a chance for the controller
+ * to close whatever error the encoders let accumulate on the way there. On this odometry the
+ * holds are not polish, they are the error budget.
+ *
+ * <p>The route is therefore one a tank drive could also follow — which is the honest summary
+ * of what a mecanum without pods buys you: the drivetrain can strafe, but you cannot yet
+ * <i>trust</i> it to, so save it for teleop and put pods on the robot before the auto depends
+ * on it.
  */
-@Autonomous(name = "Tread Mecanum Example (experimental)", group = "tread experimental")
-public class ExampleMecanumAuto extends LinearOpMode {
+@Autonomous(name = "Tread Mecanum Auto: no pods (experimental)", group = "tread experimental")
+public class NoPodsAuto extends LinearOpMode {
 
     @Override
     public void runOpMode() {
         MecanumDrive drive = MecanumConstants.buildDrive(hardwareMap);
-        // Named outright rather than taken from MecanumConstants.ODOMETRY, so the file can be
-        // read on its own. This route strafes and turns while travelling, which is exactly
-        // what drive-encoder odometry is worst at, so it wants odometry that does not slip.
-        Localizer localizer = MecanumConstants.pinpoint(hardwareMap);
+        // Named outright rather than taken from MecanumConstants.ODOMETRY: this OpMode is the
+        // no-hardware one, and it should still be that when somebody else has changed the
+        // constants to suit their own robot.
+        Localizer localizer = MecanumConstants.driveEncoders(hardwareMap, drive);
         BulkReader bulkReader = new BulkReader(hardwareMap);
         HolonomicController controller = MecanumConstants.controller();
         HolonomicPoseHold poseHold = MecanumConstants.poseHold();
@@ -59,23 +64,22 @@ public class ExampleMecanumAuto extends LinearOpMode {
 
         HolonomicRoute route = HolonomicRoute.builder(
                         start, MecanumConstants.limits(), drive.getKinematics())
-                // Out to the scoring position sideways, nose fixed on the goal the whole way.
-                // A tank robot cannot express this line at all.
-                .faceAngle(MathUtil.toRadians(90.0))
+                // Nose along the path the whole way: the direction the encoders measure well.
+                .faceTangent()
                 .to(34.0, 60.0)
                 .to(52.0, 84.0)
                 .holdFor(1.0)
 
-                // Then away, with the nose coming round to face the next task as it travels,
-                // rather than stopping to turn.
-                .withPlan(HeadingPlans.interpolate(
-                        MathUtil.toRadians(90.0), MathUtil.toRadians(200.0)))
-                .to(30.0, 100.0)
+                // Turn where the robot is still, then travel nose-first again.
                 .turnTo(MathUtil.toRadians(180.0))
-                .holdFor(0.5)
+                .faceTangent()
+                .to(24.0, 84.0)
+                .holdFor(1.0)
                 .build();
 
         telemetry.addLine(route.summary());
+        telemetry.addLine();
+        telemetry.addData("odometry", localizer.status());
         telemetry.update();
 
         waitForStart();
@@ -105,15 +109,12 @@ public class ExampleMecanumAuto extends LinearOpMode {
                         break;
                     }
                 } else {
-                    // A turn in place walks its own profile; a hold simply sits on the pose.
                     Pose target = leg.isTurn()
                             ? new Pose(leg.getHoldPose().getX(), leg.getHoldPose().getY(),
                                     leg.headingAt(elapsed))
                             : leg.getHoldPose();
                     drive.setSpeeds(poseHold.calculate(pose, target));
 
-                    // Settle on tolerance, not on the clock: the profile finishing is not the
-                    // same as the robot arriving, and a turn that ends on time ends short.
                     boolean done = elapsed >= leg.getHoldSeconds()
                             && (!leg.isTurn() || poseHold.settled(pose, target));
                     if (done || elapsed >= leg.getHoldSeconds() + 1.5) {

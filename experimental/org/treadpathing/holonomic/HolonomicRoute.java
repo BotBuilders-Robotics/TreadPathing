@@ -206,6 +206,17 @@ public final class HolonomicRoute {
             return withPlan(HeadingPlans.tangent());
         }
 
+        /**
+         * Points the nose at a fixed offset from the direction of travel.
+         *
+         * <p>An offset of pi is the holonomic version of {@code reversed()}: the robot drives
+         * the path backwards. Unlike the tank version it costs nothing -- no cusp, no stop --
+         * because the nose was never what decided the direction of travel.
+         */
+        public Builder faceTangent(double offsetRadians) {
+            return withPlan(HeadingPlans.tangent(offsetRadians));
+        }
+
         /** Turns the nose steadily to this angle across the leg that follows. */
         public Builder turnAcross(double headingRadians) {
             return withPlan(HeadingPlans.interpolate(cursor.getHeading(), headingRadians));

@@ -176,9 +176,20 @@ Two files, beside the tank quickstart they mirror:
   four corners instead of two sides, two tape-measure lengths instead of one effective track
   width, translation and heading gains instead of Ramsete, a turn-rate limit that has no tank
   counterpart, and no `buildFollower`.
-- `.../mecanum/ExampleMecanumAuto.java` — a complete autonomous. The route reads the way the
-  tank one does and says things a tank route cannot: strafe to the scoring position with the
-  nose fixed on the goal, then curve away while the nose comes round.
+- `.../mecanum/ExampleMecanumAuto.java` — a complete autonomous, **with a Pinpoint**. The
+  route reads the way the tank one does and says things a tank route cannot: strafe to the
+  scoring position with the nose fixed on the goal, then curve away while the nose comes round.
+- `.../mecanum/NoPodsAuto.java` — the same job **with no odometry hardware at all**, on the
+  four drive encoders and the IMU. Each names its localizer outright rather than reading the
+  `ODOMETRY` switch, so either file can be read on its own.
+
+The two routes differ on purpose. `MecanumEncoderLocalizer` measures forward travel well — the
+tread grips, and the encoder count means what it says — and measures strafing badly, because
+that is the rollers doing what they are shaped to do. So the no-pods route travels nose-first,
+turns on the spot rather than while moving, and holds at the points that matter, which on that
+odometry is the error budget rather than polish. It is a route a tank drive could also follow,
+and that is the honest summary of a mecanum without pods: the drivetrain can strafe, but you
+cannot yet trust it to.
 
 **The loop underneath does not read that way, and that is the argument.** On the tank side the
 whole of `runOpMode` is `follower.update()` inside `while (follower.isBusy())`, because
@@ -237,6 +248,34 @@ mean the run has to be nose-first: a full-power strafe measures the rollers, not
 That leaves rungs 1, 6, 7, 8 and 9 unported. Each transfers in substance and needs the same
 mechanical rework — a mecanum harness in place of `buildFollower` — except SquareTest and
 PoseTest, which also tune different gains because there is no Ramsete here.
+
+### Odometry without buying anything
+
+`MecanumEncoderLocalizer` is the mecanum answer to `DriveEncoderLocalizer`, which could not
+carry over: that one reads two sides and divides by a track width. This inverts the four-wheel
+kinematics instead.
+
+```
+forward = ( fl + fr + bl + br) / 4
+lateral = (-fl + fr + bl - br) / 4 / lateralMultiplier
+heading from the IMU, never from the wheels
+```
+
+Lateral is **divided** by the multiplier: the wheels turned that far and the robot went less
+far than they claim, so multiplying would double the error rather than undo it. Heading comes
+off the IMU because the rotation term of the inverse is the one slip corrupts worst — a robot
+pushed sideways reports a turn it never made — and unlike the tank version, the wheels are
+never trusted to coast the fuser between reads.
+
+The forward map lives on `MecanumKinematics` beside the inverse it undoes, and the suite
+round-trips every command through both. A sign wrong there compiles, drives a straight line
+perfectly, and shows up as a robot that drifts while strafing, months later, on a field.
+
+**`StrafeTest` refuses to run on this odometry**, which is a trap worth naming: the localizer
+recovers sideways travel by dividing by the lateral multiplier, so measuring the multiplier
+through it hands back the number already in the constants file, with a convincing run behind
+it. Refused rather than warned about, because a self-referential measurement does not look
+wrong.
 
 ### Odometry, and one line of the library that had to move
 

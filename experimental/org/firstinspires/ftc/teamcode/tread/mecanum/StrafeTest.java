@@ -30,6 +30,12 @@ import org.treadpathing.localization.Localizer;
  * wheels in opposing pairs, so their mean is near zero however far the robot has moved, and
  * the encoders cannot see the thing being measured.
  *
+ * <p>For the same reason this needs dead wheels or a Pinpoint, and refuses to run on
+ * drive-encoder odometry. {@code MecanumEncoderLocalizer} recovers sideways travel by dividing
+ * by the lateral multiplier, so measuring the multiplier through it would just hand back the
+ * number already in the constants file, with a plausible run behind it. Switch
+ * {@code MecanumConstants.ODOMETRY} to {@code TWO_WHEEL} or {@code PINPOINT} for this test.
+ *
  * <h3>Running it</h3>
  *
  * <ol>
@@ -54,7 +60,24 @@ public class StrafeTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         MecanumDrive drive = MecanumConstants.buildDrive(hardwareMap);
-        Localizer localizer = MecanumConstants.localizer(hardwareMap);
+
+        // Refused rather than warned about: a self-referential measurement does not look
+        // wrong. It produces the number already in the constants file, with a convincing run
+        // behind it, and you would trust it.
+        if (MecanumConstants.ODOMETRY == MecanumConstants.Odometry.DRIVE_ENCODERS) {
+            telemetry.addLine("This test cannot run on drive-encoder odometry.");
+            telemetry.addLine();
+            telemetry.addLine("That localizer divides sideways travel BY the lateral");
+            telemetry.addLine("multiplier, so measuring the multiplier through it would");
+            telemetry.addLine("just return the value already in MecanumConstants.");
+            telemetry.addLine();
+            telemetry.addLine("Set ODOMETRY to TWO_WHEEL or PINPOINT and run it again.");
+            telemetry.update();
+            waitForStart();
+            return;
+        }
+
+        Localizer localizer = MecanumConstants.localizer(hardwareMap, drive);
         BulkReader bulkReader = new BulkReader(hardwareMap);
 
         double forwardDistance = 0.0;

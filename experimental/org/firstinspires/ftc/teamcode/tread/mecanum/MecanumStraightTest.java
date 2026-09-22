@@ -46,7 +46,7 @@ public class MecanumStraightTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         MecanumDrive drive = MecanumConstants.buildDrive(hardwareMap);
-        Localizer localizer = MecanumConstants.localizer(hardwareMap);
+        Localizer localizer = MecanumConstants.localizer(hardwareMap, drive);
         BulkReader bulkReader = new BulkReader(hardwareMap);
 
         // The same columns the tank straight test writes, so the visualizer reads it unchanged.

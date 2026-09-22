@@ -43,4 +43,29 @@ public final class MecanumKinematics {
     public double getLateralMultiplier() {
         return lateralMultiplier;
     }
+
+    /**
+     * Robot-frame motion from four wheel travels: {@code {forward, lateral, rotation}}.
+     *
+     * <p>The inverse of {@link HolonomicSpeeds#wheelSpeeds}, and kept beside it so the two can
+     * be checked against each other. A sign wrong in here does not fail to compile and does
+     * not fail on a straight line; it shows up as a robot that drifts while strafing, months
+     * later, on a field.
+     *
+     * <p>Lateral is <b>divided</b> by the lateral multiplier: the wheels turned that far and
+     * the robot went less far than they claim. Multiplying would double the error rather than
+     * undo it.
+     *
+     * @param frontLeft  travel of the front-left wheel, inches
+     * @param frontRight travel of the front-right wheel, inches
+     * @param backLeft   travel of the back-left wheel, inches
+     * @param backRight  travel of the back-right wheel, inches
+     */
+    public double[] forward(double frontLeft, double frontRight,
+                            double backLeft, double backRight) {
+        double forward = (frontLeft + frontRight + backLeft + backRight) / 4.0;
+        double lateral = (-frontLeft + frontRight + backLeft - backRight) / 4.0 / lateralMultiplier;
+        double rotation = (-frontLeft + frontRight - backLeft + backRight) / 4.0 / turnRadius;
+        return new double[] {forward, lateral, rotation};
+    }
 }

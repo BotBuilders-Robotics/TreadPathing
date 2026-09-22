@@ -45,7 +45,7 @@ public class MecanumLocalizationTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         MecanumDrive drive = MecanumConstants.buildDrive(hardwareMap);
-        Localizer localizer = MecanumConstants.localizer(hardwareMap);
+        Localizer localizer = MecanumConstants.localizer(hardwareMap, drive);
         BulkReader bulkReader = new BulkReader(hardwareMap);
         localizer.setPose(CENTRE);
 

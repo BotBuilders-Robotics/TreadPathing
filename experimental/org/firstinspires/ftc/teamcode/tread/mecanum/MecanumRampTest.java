@@ -40,7 +40,7 @@ public class MecanumRampTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         MecanumDrive drive = MecanumConstants.buildDrive(hardwareMap);
-        Localizer localizer = MecanumConstants.localizer(hardwareMap);
+        Localizer localizer = MecanumConstants.localizer(hardwareMap, drive);
         BulkReader bulkReader = new BulkReader(hardwareMap);
 
         // The same columns the tank ramp writes, so the visualizer's fit needs no changes.
