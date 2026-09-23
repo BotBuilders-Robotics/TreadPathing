@@ -66,6 +66,18 @@ public final class HolonomicRoute {
             return turnProfile != null;
         }
 
+        /**
+         * How fast the nose should be turning at this instant of a turn in place, radians per
+         * second. Zero for a hold, and after the profile ends.
+         *
+         * <p>Handed to the pose hold as feedforward. Without it the hold chases the profile on
+         * proportional gain alone, which only turns while it is behind -- so the robot lags the
+         * whole way round and the settle window spends its time catching up.
+         */
+        public double omegaAt(double elapsed) {
+            return turnProfile == null ? 0.0 : turnProfile.velocity(elapsed);
+        }
+
         /** Where the nose should be at this instant of a turn in place. */
         public double headingAt(double elapsed) {
             if (turnProfile == null) {
@@ -156,10 +168,25 @@ public final class HolonomicRoute {
         private final MecanumKinematics kinematics;
         private final Pose start;
 
+        /**
+         * Pieces driven back to back without a stop, waiting to be profiled as one trajectory.
+         * The run ends -- and the robot stops -- only at a hold, a turn or the end of the route.
+         */
+        private final List<SplinePath> runPaths = new ArrayList<SplinePath>();
+        private final List<HeadingPlan> runPlans = new ArrayList<HeadingPlan>();
+        private double runEndTangent;
+
         private Pose cursor;
         private SplinePath.Builder pending;
         private int pendingWaypoints;
         private HeadingPlan plan;
+        /**
+         * Largest heading step a new plan may start with before the builder turns on the spot
+         * to close it. Big enough to ignore rounding at a seam, small enough that the
+         * controller absorbs what is left without saturating.
+         */
+        private static final double HEADING_STEP_TOLERANCE = Math.toRadians(1.0);
+
         private double maxAngularAcceleration = 6.0;
         private double turnSettleSeconds = 0.5;
 
@@ -186,8 +213,11 @@ public final class HolonomicRoute {
          */
         public Builder to(double x, double y, double tangentRadians) {
             if (pending == null) {
-                pending = SplinePath.builder(new Pose(cursor.getX(), cursor.getY(),
-                        cursorTangentTo(x, y)));
+                // Carrying on from a piece that has not stopped, the path has to leave in the
+                // direction the robot is already travelling. A kink here would be a step in
+                // the velocity vector, which no profile can drive through.
+                double startTangent = runPaths.isEmpty() ? cursorTangentTo(x, y) : runEndTangent;
+                pending = SplinePath.builder(new Pose(cursor.getX(), cursor.getY(), startTangent));
                 pendingWaypoints = 0;
             }
             pending.to(new Pose(x, y, tangentRadians));
@@ -210,8 +240,9 @@ public final class HolonomicRoute {
          * Points the nose at a fixed offset from the direction of travel.
          *
          * <p>An offset of pi is the holonomic version of {@code reversed()}: the robot drives
-         * the path backwards. Unlike the tank version it costs nothing -- no cusp, no stop --
-         * because the nose was never what decided the direction of travel.
+         * the path backwards. Unlike the tank version there is no cusp, because the nose was
+         * never what decided the direction of travel. The nose still has to get round,
+         * though: switching to this from a nose-first plan is a turn on the spot at the seam.
          */
         public Builder faceTangent(double offsetRadians) {
             return withPlan(HeadingPlans.tangent(offsetRadians));
@@ -219,13 +250,25 @@ public final class HolonomicRoute {
 
         /** Turns the nose steadily to this angle across the leg that follows. */
         public Builder turnAcross(double headingRadians) {
+            // Flush first: the waypoints already given may end on a different heading from
+            // the one the cursor holds until they are closed off, and the turn has to start
+            // from where the nose will actually be.
+            flush();
             return withPlan(HeadingPlans.interpolate(cursor.getHeading(), headingRadians));
         }
 
+        /**
+         * Changes what the nose does from here on.
+         *
+         * <p>Unlike a tank cusp this does not stop the robot: the new piece is profiled
+         * together with the one before it, so the speed carries straight through the seam. The
+         * path leaves the seam in the direction it arrived, for the same reason.
+         *
+         * <p>The one thing it cannot carry through is a jump in heading. If the new plan wants
+         * the nose somewhere other than where the last one left it, the robot stops there and
+         * turns on the spot first -- see {@link #flush}.
+         */
         public Builder withPlan(HeadingPlan newPlan) {
-            // A change of plan closes the current leg, because the plan is what the leg's
-            // profile was solved against. Unlike a tank cusp this costs nothing but a sample:
-            // the robot is not required to stop at the seam.
             flush();
             plan = newPlan;
             return this;
@@ -240,12 +283,9 @@ public final class HolonomicRoute {
          */
         public Builder turnTo(double headingRadians) {
             flush();
-            double delta = MathUtil.angleDelta(cursor.getHeading(), headingRadians);
-            MotionProfile profile = new MotionProfile(delta,
-                    constraints.getMaxAngularVelocity(), maxAngularAcceleration);
-            legs.add(Leg.turn(cursor, profile, cursor.getHeading(), turnSettleSeconds,
-                    String.format("turn to %.0f deg", Math.toDegrees(headingRadians))));
-            cursor = new Pose(cursor.getX(), cursor.getY(), headingRadians);
+            endRun();
+            addTurn(cursor.getX(), cursor.getY(), headingRadians,
+                    String.format("turn to %.0f deg", Math.toDegrees(headingRadians)));
             plan = HeadingPlans.hold(headingRadians);
             return this;
         }
@@ -264,6 +304,7 @@ public final class HolonomicRoute {
 
         public Builder holdFor(double seconds) {
             flush();
+            endRun();
             legs.add(Leg.hold(cursor, seconds,
                     String.format("hold %.1f s at %.0f, %.0f", seconds, cursor.getX(), cursor.getY())));
             return this;
@@ -271,26 +312,70 @@ public final class HolonomicRoute {
 
         public HolonomicRoute build() {
             flush();
+            endRun();
             if (legs.isEmpty()) {
                 throw new IllegalStateException("Route is empty");
             }
             return new HolonomicRoute(legs, start, cursor);
         }
 
+        /**
+         * Closes the waypoints given so far into a piece of the current run.
+         *
+         * <p>This is also where a heading step is caught. A plan is free to ask for any nose
+         * angle at the start of its path -- {@code faceAngle(90)} from a robot facing 0 is the
+         * obvious one -- but a trajectory that begins 90 degrees away from the robot hands the
+         * controller an error the planner never budgeted a wheel for. It spins at whatever
+         * the heading gain asks, the command saturates, and translation is scaled down with
+         * it. So the run stops there and a profiled turn in place closes the gap first.
+         */
         private void flush() {
             if (pending == null || pendingWaypoints == 0) {
                 pending = null;
                 return;
             }
             SplinePath path = pending.build();
-            HolonomicTrajectory trajectory = HolonomicTrajectoryGenerator.generate(
-                    path, plan, constraints, kinematics);
-            legs.add(Leg.drive(trajectory, String.format("drive %.1f in, %s",
-                    path.length(), plan.describe())));
-            cursor = new Pose(cursor.getX(), cursor.getY(),
-                    plan.headingAt(path, path.length()));
             pending = null;
             pendingWaypoints = 0;
+
+            double startHeading = plan.headingAt(path, 0.0);
+            if (Math.abs(MathUtil.angleDelta(cursor.getHeading(), startHeading))
+                    > HEADING_STEP_TOLERANCE) {
+                endRun();
+                Pose from = path.poseAt(0.0);
+                addTurn(from.getX(), from.getY(), startHeading,
+                        String.format("turn to %.0f deg to start the next leg",
+                                Math.toDegrees(startHeading)));
+            }
+
+            runPaths.add(path);
+            runPlans.add(plan);
+            runEndTangent = path.poseAt(path.length()).getHeading();
+            cursor = new Pose(cursor.getX(), cursor.getY(),
+                    plan.headingAt(path, path.length()));
+        }
+
+        /** Profiles the current run as one trajectory, ending at rest. */
+        private void endRun() {
+            if (runPaths.isEmpty()) {
+                return;
+            }
+            HolonomicTrajectory trajectory = HolonomicTrajectoryGenerator.generate(
+                    new ArrayList<SplinePath>(runPaths), new ArrayList<HeadingPlan>(runPlans),
+                    constraints, kinematics, HolonomicTrajectoryGenerator.DEFAULT_SAMPLE_SPACING);
+            legs.add(Leg.drive(trajectory, String.format("drive %.1f in, %s",
+                    trajectory.getLength(), trajectory.getHeadingPlan())));
+            runPaths.clear();
+            runPlans.clear();
+        }
+
+        private void addTurn(double x, double y, double headingRadians, String label) {
+            double delta = MathUtil.angleDelta(cursor.getHeading(), headingRadians);
+            MotionProfile profile = new MotionProfile(delta,
+                    constraints.getMaxAngularVelocity(), maxAngularAcceleration);
+            legs.add(Leg.turn(new Pose(x, y, cursor.getHeading()), profile, cursor.getHeading(),
+                    turnSettleSeconds, label));
+            cursor = new Pose(cursor.getX(), cursor.getY(), headingRadians);
         }
 
         private double cursorTangentTo(double x, double y) {

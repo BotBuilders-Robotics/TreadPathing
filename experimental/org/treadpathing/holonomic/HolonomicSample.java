@@ -19,9 +19,19 @@ public final class HolonomicSample {
     private final double fieldVy;
     private final double omega;
     private final double acceleration;
+    private final double fieldAx;
+    private final double fieldAy;
+    private final double alpha;
 
+    /**
+     * @param acceleration rate of change of speed along the path, inches per second squared
+     * @param fieldAx      field-frame acceleration, both along the path and into the bend
+     * @param fieldAy      field-frame acceleration, both along the path and into the bend
+     * @param alpha        angular acceleration, radians per second squared
+     */
     public HolonomicSample(double time, double arcLength, Pose pose,
-                           double fieldVx, double fieldVy, double omega, double acceleration) {
+                           double fieldVx, double fieldVy, double omega, double acceleration,
+                           double fieldAx, double fieldAy, double alpha) {
         this.time = time;
         this.arcLength = arcLength;
         this.pose = pose;
@@ -29,6 +39,9 @@ public final class HolonomicSample {
         this.fieldVy = fieldVy;
         this.omega = omega;
         this.acceleration = acceleration;
+        this.fieldAx = fieldAx;
+        this.fieldAy = fieldAy;
+        this.alpha = alpha;
     }
 
     public double getTime() {
@@ -61,9 +74,51 @@ public final class HolonomicSample {
         return Math.hypot(fieldVx, fieldVy);
     }
 
-    /** Acceleration along the path, inches per second squared. */
+    /**
+     * Acceleration along the path, inches per second squared.
+     *
+     * <p>A scalar, so it says nothing about which way any wheel is turning. Feed the motors
+     * {@link #robotAcceleration} instead.
+     */
     public double getAcceleration() {
         return acceleration;
+    }
+
+    public double getFieldAx() {
+        return fieldAx;
+    }
+
+    public double getFieldAy() {
+        return fieldAy;
+    }
+
+    public double getAlpha() {
+        return alpha;
+    }
+
+    /**
+     * The acceleration each wheel has to find, as a robot-frame command: pass it through
+     * {@link HolonomicSpeeds#wheelSpeeds} and the result is per-wheel acceleration.
+     *
+     * <p>The tank drive can hand one number to both sides because both sides always speed up
+     * together. A mecanum cannot: in a strafe left the front-left and back-right wheels run
+     * backwards, so speeding up the robot means speeding those wheels up <b>in reverse</b>,
+     * and the same kA term applied with the path's sign pushes them the wrong way.
+     *
+     * <p>The {@code omega} terms are there because the robot frame itself turns: a robot
+     * holding a steady field velocity while its nose swings round still has wheels that
+     * speed up and slow down.
+     *
+     * @param heading the heading the command is being rotated by, which is the measured one
+     */
+    public HolonomicSpeeds robotAcceleration(double heading) {
+        double cos = Math.cos(heading);
+        double sin = Math.sin(heading);
+        double ax = fieldAx * cos + fieldAy * sin;
+        double ay = -fieldAx * sin + fieldAy * cos;
+        double vx = fieldVx * cos + fieldVy * sin;
+        double vy = -fieldVx * sin + fieldVy * cos;
+        return new HolonomicSpeeds(ax + omega * vy, ay - omega * vx, alpha);
     }
 
     /**

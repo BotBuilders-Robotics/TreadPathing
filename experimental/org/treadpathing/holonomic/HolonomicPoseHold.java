@@ -47,6 +47,19 @@ public final class HolonomicPoseHold {
     }
 
     public HolonomicSpeeds calculate(Pose measured, Pose target) {
+        return calculate(measured, target, 0.0);
+    }
+
+    /**
+     * Holds a target that is itself turning, such as a profiled turn in place.
+     *
+     * <p>{@code maxOmega} caps the correction, not the feedforward: the profile has already
+     * been planned inside the robot's turn rate, and clipping it to the hold's gentler ceiling
+     * would make the robot fall behind by design.
+     *
+     * @param feedforwardOmega how fast the target heading is moving, radians per second
+     */
+    public HolonomicSpeeds calculate(Pose measured, Pose target, double feedforwardOmega) {
         double errorX = target.getX() - measured.getX();
         double errorY = target.getY() - measured.getY();
         double errorHeading = MathUtil.angleDelta(measured.getHeading(), target.getHeading());
@@ -60,7 +73,8 @@ public final class HolonomicPoseHold {
             vy *= scale;
         }
 
-        double omega = MathUtil.clamp(errorHeading * headingGain, -maxOmega, maxOmega);
+        double omega = feedforwardOmega
+                + MathUtil.clamp(errorHeading * headingGain, -maxOmega, maxOmega);
         return HolonomicSpeeds.fromField(vx, vy, omega, measured.getHeading());
     }
 

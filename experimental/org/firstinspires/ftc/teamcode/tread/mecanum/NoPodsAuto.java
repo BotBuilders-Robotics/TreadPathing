@@ -104,7 +104,7 @@ public class NoPodsAuto extends LinearOpMode {
                     HolonomicTrajectory trajectory = leg.getTrajectory();
                     HolonomicSample reference = trajectory.sample(elapsed);
                     drive.setSpeeds(controller.calculate(pose, reference),
-                            reference.getAcceleration());
+                            reference.robotAcceleration(pose.getHeading()));
                     if (elapsed >= trajectory.getDuration()) {
                         break;
                     }
@@ -113,7 +113,7 @@ public class NoPodsAuto extends LinearOpMode {
                             ? new Pose(leg.getHoldPose().getX(), leg.getHoldPose().getY(),
                                     leg.headingAt(elapsed))
                             : leg.getHoldPose();
-                    drive.setSpeeds(poseHold.calculate(pose, target));
+                    drive.setSpeeds(poseHold.calculate(pose, target, leg.omegaAt(elapsed)));
 
                     boolean done = elapsed >= leg.getHoldSeconds()
                             && (!leg.isTurn() || poseHold.settled(pose, target));

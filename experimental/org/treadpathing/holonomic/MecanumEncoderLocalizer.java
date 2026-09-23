@@ -60,6 +60,11 @@ public final class MecanumEncoderLocalizer implements Localizer {
         this.drive = drive;
         this.headingFuser = headingFuser;
         this.kinematics = drive.getKinematics();
+        // This localizer feeds the fuser zero rotation between IMU reads, on purpose -- see
+        // update(). With any decimation above 1 that would freeze the heading between reads,
+        // so every pose update in between would be integrated along a stale heading. Reading
+        // every loop is the only setting that is correct here, so it is not left to the caller.
+        headingFuser.setDecimation(1);
     }
 
     @Override

@@ -100,7 +100,7 @@ public class ExampleMecanumAuto extends LinearOpMode {
                     HolonomicTrajectory trajectory = leg.getTrajectory();
                     HolonomicSample reference = trajectory.sample(elapsed);
                     drive.setSpeeds(controller.calculate(pose, reference),
-                            reference.getAcceleration());
+                            reference.robotAcceleration(pose.getHeading()));
                     if (elapsed >= trajectory.getDuration()) {
                         break;
                     }
@@ -110,7 +110,7 @@ public class ExampleMecanumAuto extends LinearOpMode {
                             ? new Pose(leg.getHoldPose().getX(), leg.getHoldPose().getY(),
                                     leg.headingAt(elapsed))
                             : leg.getHoldPose();
-                    drive.setSpeeds(poseHold.calculate(pose, target));
+                    drive.setSpeeds(poseHold.calculate(pose, target, leg.omegaAt(elapsed)));
 
                     // Settle on tolerance, not on the clock: the profile finishing is not the
                     // same as the robot arriving, and a turn that ends on time ends short.

@@ -78,7 +78,10 @@ public final class HolonomicTrajectory {
                 MathUtil.lerp(a.getFieldVx(), b.getFieldVx(), t),
                 MathUtil.lerp(a.getFieldVy(), b.getFieldVy(), t),
                 MathUtil.lerp(a.getOmega(), b.getOmega(), t),
-                MathUtil.lerp(a.getAcceleration(), b.getAcceleration(), t));
+                MathUtil.lerp(a.getAcceleration(), b.getAcceleration(), t),
+                MathUtil.lerp(a.getFieldAx(), b.getFieldAx(), t),
+                MathUtil.lerp(a.getFieldAy(), b.getFieldAy(), t),
+                MathUtil.lerp(a.getAlpha(), b.getAlpha(), t));
     }
 
     public double completionAt(double time) {

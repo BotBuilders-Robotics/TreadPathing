@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
-import org.treadpathing.control.Feedforward;
 import org.treadpathing.geometry.MathUtil;
 import org.treadpathing.hardware.DriveConstants;
 
@@ -25,7 +24,7 @@ public final class MecanumDrive {
     private final DcMotorEx[] motors;
     private final MecanumDriveConstants constants;
     private final MecanumKinematics kinematics;
-    private final Feedforward feedforward;
+    private final MecanumFeedforward feedforward;
     private final VoltageSensor voltageSensor;
 
     private final double[] lastCommand = new double[4];
@@ -36,9 +35,8 @@ public final class MecanumDrive {
     public MecanumDrive(HardwareMap hardwareMap, MecanumDriveConstants constants) {
         constants.validate();
         this.constants = constants;
-        this.kinematics = constants.kinematics();
-        this.feedforward = new Feedforward(constants.getKS(), constants.getKV(), constants.getKA(),
-                constants.getStaticDeadband());
+        this.feedforward = new MecanumFeedforward(constants);
+        this.kinematics = feedforward.getKinematics();
 
         String[] names = constants.getMotors();
         boolean[] reversed = constants.getReversed();
@@ -87,13 +85,16 @@ public final class MecanumDrive {
 
     /**
      * @param speeds       what the controller asked for, in the robot's frame
-     * @param acceleration reference acceleration along the path, for the kA term
+     * @param acceleration the reference's acceleration in the same frame, from
+     *                     {@link HolonomicSample#robotAcceleration}, for the kA term
+     *
+     * <p>In {@code HUB_PIDF} mode only the wheel speeds reach the motors: {@code setVelocity}
+     * has no way to take a feedforward term, so kS, kA and voltage compensation are left to
+     * the hub's own loop. {@code TankDrive} makes the same trade.
      */
-    public void setSpeeds(HolonomicSpeeds speeds, double acceleration) {
-        HolonomicSpeeds limited = speeds.desaturate(kinematics, constants.getMaxWheelVelocity());
-        double[] wheels = limited.wheelSpeeds(kinematics);
-
+    public void setSpeeds(HolonomicSpeeds speeds, HolonomicSpeeds acceleration) {
         if (constants.getVelocityMode() == DriveConstants.VelocityMode.HUB_PIDF) {
+            double[] wheels = feedforward.wheelSpeeds(speeds);
             for (int i = 0; i < 4; i++) {
                 applyVelocity(i, wheels[i] * constants.getTicksPerInch());
             }
@@ -101,13 +102,11 @@ public final class MecanumDrive {
             return;
         }
 
-        double scale = voltageScale();
+        double[] powers = feedforward.powers(speeds, acceleration, voltageScale());
         for (int i = 0; i < 4; i++) {
-            double power = MathUtil.clamp(
-                    feedforward.calculate(wheels[i], acceleration) * scale, -1.0, 1.0);
-            if (shouldWrite(i, power)) {
-                motors[i].setPower(power);
-                lastCommand[i] = power;
+            if (shouldWrite(i, powers[i])) {
+                motors[i].setPower(powers[i]);
+                lastCommand[i] = powers[i];
             }
         }
         everWritten = true;
@@ -130,7 +129,7 @@ public final class MecanumDrive {
     }
 
     public void setSpeeds(HolonomicSpeeds speeds) {
-        setSpeeds(speeds, 0.0);
+        setSpeeds(speeds, HolonomicSpeeds.ZERO);
     }
 
     public void stop() {
